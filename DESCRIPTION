@@ -1,0 +1,28 @@
+Package: SPARKS
+Type: Package
+Title: Splicing Profile Analysis for RBP KD Signatures (SPARKS)
+Version: 0.1.0
+Authors@R: person("Harry", "Yang", email = "harry2416@gmail.com",
+                  role = c("aut", "cre"))
+Maintainer: Harry Taegyun Yang <harry2416@gmail.com>
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.2
+Imports: 
+    maftools,
+    ggplot2,
+    stringr,
+    reshape2,
+    RColorBrewer,
+    gtools,
+    data.table,
+    R.utils,
+    dplyr,
+    BSgenome.Hsapiens.UCSC.hg19,
+    VarCon,
+    seqinr,
+    ggseqlogo,
+    pbmcapply
