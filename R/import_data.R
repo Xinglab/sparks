@@ -33,7 +33,8 @@ SPARKS <- setClass("SPARKS",
                     motif_analysis_result = "list",
                     clip_result_list = "list",
                     exon_annotation = "list",
-                    MATS_list = "list"
+                    MATS_list = "list",
+                    SPARKS_analysis_result = "list"
                   ))
 
 
