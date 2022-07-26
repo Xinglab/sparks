@@ -479,7 +479,9 @@ generate_strip_lollipop_plot_vertical <- function(test_result_list,
                                                   color_offset = 0,
                                                   score_legend = FALSE,
                                                   color = "Set1",
-                                                  manual_colors = NULL){
+                                                  manual_colors = NULL,
+                                                  y_axis_title = "Enrichment Score Rank",
+                                                  strip_break_interval = 150){
   # check validity of input splicing type
   spl_types <- c("SE", "A5SS", "A3SS")
   if (!(spl_type) %in% spl_types){
@@ -610,7 +612,7 @@ generate_strip_lollipop_plot_vertical <- function(test_result_list,
     scale_y_reverse(limits = rev(c(0, max(test_result_df$plot_rank))),  # manually set x axis scales to match the strip plot
                     expand = expansion(add = c(10, 10)),
                     breaks = c(1, # breaks at the begining
-                               seq(floor(max(test_result_df$plot_rank) / 150)) * 150,  # breaks at every 150 experiments
+                               seq(floor(max(test_result_df$plot_rank) / strip_break_interval)) * strip_break_interval,  # breaks at every 150 experiments
                                max(test_result_df$plot_rank))) +  # breaks at the end
     scale_x_discrete(expand = c(0, 0)) +
     scale_fill_distiller(palette = "PiYG",  # manually set fill for enrichment score
@@ -620,7 +622,7 @@ generate_strip_lollipop_plot_vertical <- function(test_result_list,
                          labels = c(">0.8", 0.4, 0, -0.4, "<-0.8"),
                          values = c(0, 0.25, 0.5, 0.75, 1)) +
     labs(fill = "Enrichment\nScore",
-         y = "Enrichment Score Rank") +
+         y = y_axis_title) +
     theme(legend.position = "right",
           legend.text = element_text(size = 8),  # change legend text size
           legend.title = element_text(size = 10)) +
