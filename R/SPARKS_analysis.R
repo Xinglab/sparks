@@ -12,7 +12,7 @@ perform_SPARKS_analysis <- function(study_mats, kd_library, study, method = "GSE
   test_result_df <- do.call(rbind, pbmcapply::pbmclapply(names(kd_library), function(signature){
     # test_result_df <- do.call(rbind, lapply(names(kd_library), function(signature){
 
-    print(signature)
+    # print(signature)
     test_mats <- kd_library[[signature]]
 
     # calculate Rho-based enrichment score
