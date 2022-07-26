@@ -1,7 +1,7 @@
 ##### FUNCTION #####
 ## Perform SPARKS test
 #' @export
-perform_SPARKS_analysis <- function(study_mats, kd_library, study, method = "GSEA"){
+perform_SPARKS_analysis <- function(study_mats, kd_library, study, method = "GSEA", num_cores = 3){
 
   # divide pos events and neg events for GSEA query
   test_event_list <- extract_GSEA_significant_events(study_mats)
@@ -15,35 +15,29 @@ perform_SPARKS_analysis <- function(study_mats, kd_library, study, method = "GSE
     print(signature)
     test_mats <- kd_library[[signature]]
 
-
-
+    # calculate Rho-based enrichment score
     result_df <- calculate_RBP_KD_correlation_from_mats(test_mats, study_mats, signature, study, num_permutation = 100, beta_threshold = 0.1)
 
-    # calculate concordance
+    # calculate Tau-based enrichment score
     concord_result_df <- calculate_RBP_KD_concordance_from_mats(test_mats, study_mats, signature, study)
 
-    # merge concordance result with linear model result
+    # merge Tau result with Rho result
     result_df$concordance <- concord_result_df$score
     result_df$concordance_abs <- concord_result_df$score_abs
 
-
+    # calculate GSEA-based enrichment score
     gsea_score <- calculate_GSEA_score(test_mats, test_pos_events, test_neg_events)
 
-    # calculate rank
+    # merge GSEA result to total result
     result_df$gsea_pos_score <- gsea_score$pos_score
     result_df$gsea_neg_score <- gsea_score$neg_score
     result_df$gsea_score <- gsea_score$pos_score - gsea_score$neg_score
     result_df$gsea_score_abs <- abs(gsea_score$pos_score - gsea_score$neg_score)
 
-
     return(result_df)
-  }, mc.cores = 3))
-  # }))
-
-  # }))
+  }, mc.cores = num_cores))
 
   ### calculate RANK for downstream analysis
-
   if (method == "GSEA"){
     test_result_df$rank <- rank(-test_result_df$gsea_score_abs)
     test_result_df$plot_score <- test_result_df$gsea_score_abs
