@@ -1,5 +1,5 @@
 ##### INITIALIZATION #####
-library(START)
+library(SPARKS)
 library(ggplot2)
 
 # import library for analysis
@@ -48,13 +48,13 @@ lapply(perturbation_methods, function(perturbation_method){
       # run analysis
       # - SPARKS analysis code actually include all three similarity metrics
       # - Note that the rank would be wrong, so would need to re compute downstream
-      test_result_df <- SPARKS::perform_SPARKS_analysis(study_mats, kd_library_spltype, study = study_of_interest, num_cores = 16)
+      test_result_df <- SPARKS::perform_SPARKS_analysis(study_mats, kd_library_spltype, study = study_of_interest, num_cores = 24)
 
       return(test_result_df)
     }))
 
     data.table::fwrite(benchmark_result_df,
-                       file = sprintf("./benchmark_result.%s.%s.df.txt", perturbation_method, spl_type))
+                       file = sprintf("./benchmark/benchmark_result.%s.%s.df.txt", perturbation_method, spl_type))
     return(count_threshold)
   })
 
