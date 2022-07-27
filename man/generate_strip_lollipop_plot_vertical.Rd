@@ -12,7 +12,9 @@ generate_strip_lollipop_plot_vertical(
   color_offset = 0,
   score_legend = FALSE,
   color = "Set1",
-  manual_colors = NULL
+  manual_colors = NULL,
+  y_axis_title = "Enrichment Score Rank",
+  strip_break_interval = 150
 )
 }
 \arguments{

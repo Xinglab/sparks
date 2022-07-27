@@ -35,7 +35,9 @@ option_list = list(
   make_option(c("--MATS_SE"), type = "character", default = NULL, help = "MATS result for SE events"),
   make_option(c("--MATS_A3SS"), type = "character", default = NULL, help = "MATS result for A3SS events"),
   make_option(c("--MATS_A5SS"), type = "character", default = NULL, help = "MATS result for A5SS events"),
-  make_option(c("--MATS_RI"), type = "character", default = NULL, help = "MATS result for RI events")
+  make_option(c("--MATS_RI"), type = "character", default = NULL, help = "MATS result for RI events"),
+  
+  make_option(c("--SPARKS_library"), type = "character", default = NULL, help = "Library for SPARKS")
 )
 
 # TODO - add options to run SPARKS analysis by default
@@ -117,6 +119,14 @@ if (!(is.null(opt$MATS_RI))){
   sparks_obj <- import_MATS(sparks_obj, input_MATS_RI, 'RI')
 }
 
+# perform SPARKS analysis if the option is used
+if (!(is.null(opt$sparks_library))){
+  kd_library_all <- readRDS(opt$sparks_library)
+  analysis_result <- perform_SPARKS_analysis_for_all_splice_types(sparks_obj, 
+    kd_library_all, 
+    test_study = opt$cancer_type)
+  sparks_obj$SPARKS_analysis_result <- analysis_result
+}
 
 
 # save the object

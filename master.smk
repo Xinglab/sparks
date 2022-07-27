@@ -7,6 +7,7 @@ REPO_DIR = "~/xinglab/tools/SPARKS/"
 REF_FASTA = "~/xinglab/references/grch37/ucsc.hg19.fasta"
 KAL_INDEX_FILE = "/home/yangt3/xinglab/references/kallisto/homo_sapiens/transcriptome.idx"
 GENCODE_GTF = "/home/yangt3/aspera/GTEx/references/37.chr/gencode.v26lift37.annotation.gtf"
+SPARKS_LIB_FILE = "/home/yangt3/xinglab/ENCODE/SPARKS/ENCODE_library.KD_and_KO.count_20.rds"
 WD = os.path.dirname(os.path.realpath(__file__))
 
 # event type definition
@@ -91,13 +92,19 @@ else:
 if config['clip_mode']:
     print("CLIP analysis mode enabled")
     if config['stat_mode']:
-        ruleorder: generate_SPARKS_full > generate_SPARKS_full_with_stat_without_clip > generate_SPARKS_full_without_stat > generate_SPARKS_naive
+        if config['analysis_mode']:
+            ruleorder: generate_SPARKS_full_with_analysis > generate_SPARKS_full > generate_SPARKS_full_with_stat_without_clip > generate_SPARKS_full_without_stat > generate_SPARKS_naive
+        else: 
+            ruleorder: generate_SPARKS_full > generate_SPARKS_full_with_analysis > generate_SPARKS_full_with_stat_without_clip > generate_SPARKS_full_without_stat > generate_SPARKS_naive
     else:  # no stat mode
         ruleorder: generate_SPARKS_full_without_stat > generate_SPARKS_full > generate_SPARKS_full_with_stat_without_clip > generate_SPARKS_naive
 else:
     print("CLIP analysis mode disabled")
     if config['stat_mode']:
-        ruleorder: generate_SPARKS_full_with_stat_without_clip > generate_SPARKS_naive > generate_SPARKS_full >  generate_SPARKS_full_without_stat
+        if config['analysis_mode']:
+            ruleorder: generate_SPARKS_full_with_stat_without_clip_with_analysis > generate_SPARKS_full_with_stat_without_clip > generate_SPARKS_naive > generate_SPARKS_full >  generate_SPARKS_full_without_stat
+        else:
+            ruleorder: generate_SPARKS_full_with_stat_without_clip > generate_SPARKS_full_with_stat_without_clip_with_analysis > generate_SPARKS_naive > generate_SPARKS_full >  generate_SPARKS_full_without_stat            
     else:  # no stat mode
         ruleorder: generate_SPARKS_naive > generate_SPARKS_full_with_stat_without_clip > generate_SPARKS_full >  generate_SPARKS_full_without_stat
 
@@ -465,6 +472,48 @@ rule intersect_CLIP:
         """
 
 # Generate SPARKS objects 
+rule generate_SPARKS_full_with_analysis:
+    input:
+        psi_df_list=expand("rMATS_stats_matrix/filtered_psi.matrix.{{cancer_type}}.{event_type}.csv",event_type=event_types),
+        exp_matrix="{cancer_type}.merged.exp.kallisto.txt",
+        clip_result=expand("CLIP/{{cancer_type}}.CLIP_overlap.{event_type}.tsv",event_type=event_types),
+        mats_result=expand("rMATS_stats_matrix/{{cancer_type}}.{event_type}.MATS_df.txt",event_type=event_types)
+    output:
+        "{cancer_type}.done"
+    params:
+        # cluster = "-l h_vmem=32G "
+        cluster="--mem=32G -t 06:00:00"
+    shell:
+        """
+        export LD_LIBRARY_PATH=/cm/shared/easybuild/software/GCCcore/10.3.0/lib64:/cm/shared/easybuild/software/bzip2/1.0.8-GCCcore-10.3.0/lib64:/cm/local/apps/gcc/9.2.0/lib64:${{LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}}:/cm/local/apps/gcc/9.2.0/lib:/cm/shared/apps_chop/R/4.0.2/lib64/R/lib:/cm/shared/apps_chop/R/4.0.2/lib64/R:/cm/shared/apps_chop/jags/4.3.0/lib:/cm/shared/apps_chop/gsl/2.5/lib:/cm/shared/apps_chop/gdal/2.4.0/lib:/cm/shared/apps_chop/hdf5/1.10.4/lib:/cm/shared/apps_chop/jdk/1.8.0_144/jre/lib/amd64/server:/cm/shared/apps_chop/jdk/1.8.0_144/lib:/cm/shared/apps_chop/perl/5.26.1/lib:/cm/shared/easybuild/software/ScaLAPACK/2.0.2-gompi-2018b-OpenBLAS-0.3.1/lib:/cm/shared/easybuild/software/FFTW/3.3.8-gompi-2018b/lib:/cm/shared/easybuild/software/OpenBLAS/0.3.1-GCC-7.3.0-2.30/lib:/cm/shared/easybuild/software/OpenMPI/3.1.1-GCC-7.3.0-2.30/lib:/cm/shared/easybuild/software/hwloc/1.11.10-GCCcore-7.3.0/lib:/cm/shared/easybuild/software/libpciaccess/0.14-GCCcore-7.3.0/lib:/cm/shared/easybuild/software/libxml2/2.9.8-GCCcore-7.3.0/lib:/cm/shared/easybuild/software/XZ/5.2.4-GCCcore-7.3.0/lib:/cm/shared/easybuild/software/numactl/2.0.11-GCCcore-7.3.0/lib:/cm/shared/easybuild/software/zlib/1.2.11-GCCcore-7.3.0/lib:/cm/shared/easybuild/software/binutils/2.30-GCCcore-7.3.0/lib:/cm/shared/easybuild/software/GCCcore/7.3.0/lib/gcc/x86_64-pc-linux-gnu/7.3.0:/cm/shared/easybuild/software/GCCcore/7.3.0/lib64:/cm/shared/easybuild/software/GCCcore/7.3.0/lib:/cm/shared/apps_chop/sam-bcf-tools/1.6/lib:/cm/shared/apps/uge/8.6.12/lib/lx-amd64:/cm/shared/apps_chop/readline/8.1/lib
+        module load R
+        # module load GCC
+        Rscript {REPO_DIR}/generate_SPARKS_object.R \
+        --psi_SE rMATS_stats_matrix/filtered_psi.matrix.{wildcards.cancer_type}.SE.csv \
+        --psi_A3SS rMATS_stats_matrix/filtered_psi.matrix.{wildcards.cancer_type}.A3SS.csv \
+        --psi_A5SS rMATS_stats_matrix/filtered_psi.matrix.{wildcards.cancer_type}.A5SS.csv \
+        --psi_RI rMATS_stats_matrix/filtered_psi.matrix.{wildcards.cancer_type}.RI.csv \
+        --exp {input.exp_matrix} \
+        --cancer_type {wildcards.cancer_type} \
+        --CLIP_SE CLIP/{wildcards.cancer_type}.CLIP_overlap.SE.tsv \
+        --CLIP_A3SS CLIP/{wildcards.cancer_type}.CLIP_overlap.A3SS.tsv \
+        --CLIP_A5SS CLIP/{wildcards.cancer_type}.CLIP_overlap.A5SS.tsv \
+        --CLIP_RI CLIP/{wildcards.cancer_type}.CLIP_overlap.RI.tsv \
+        --exon_anno_SE rMATS_stats_matrix/AS_annotation.SE.{wildcards.cancer_type}.txt \
+        --exon_anno_A3SS rMATS_stats_matrix/AS_annotation.A3SS.{wildcards.cancer_type}.txt \
+        --exon_anno_A5SS rMATS_stats_matrix/AS_annotation.A5SS.{wildcards.cancer_type}.txt \
+        --exon_anno_RI rMATS_stats_matrix/AS_annotation.RI.{wildcards.cancer_type}.txt \
+        --MATS_SE rMATS_stats_matrix/{wildcards.cancer_type}.SE.MATS_df.txt \
+        --MATS_A3SS rMATS_stats_matrix/{wildcards.cancer_type}.A3SS.MATS_df.txt \
+        --MATS_A5SS rMATS_stats_matrix/{wildcards.cancer_type}.A5SS.MATS_df.txt \
+        --MATS_RI rMATS_stats_matrix/{wildcards.cancer_type}.RI.MATS_df.txt \
+        --SPARKS_library {SPARKS_LIB_FILE}
+
+        touch {wildcards.cancer_type}.done
+
+        """
+
+
 rule generate_SPARKS_full:
     input:
         psi_df_list=expand("rMATS_stats_matrix/filtered_psi.matrix.{{cancer_type}}.{event_type}.csv",event_type=event_types),
@@ -501,6 +550,43 @@ rule generate_SPARKS_full:
         --MATS_A5SS rMATS_stats_matrix/{wildcards.cancer_type}.A5SS.MATS_df.txt \
         --MATS_RI rMATS_stats_matrix/{wildcards.cancer_type}.RI.MATS_df.txt 
 
+        touch {wildcards.cancer_type}.done
+
+        """
+
+
+rule generate_SPARKS_full_with_stat_without_clip_with_analysis:
+    input:
+        psi_df_list=expand("rmats_stats_matrix/filtered_psi.matrix.{{cancer_type}}.{event_type}.csv",event_type=event_types),
+        exp_matrix="{cancer_type}.merged.exp.kallisto.txt",
+        mats_result=expand("rmats_stats_matrix/{{cancer_type}}.{event_type}.MATS_df.txt",event_type=event_types),
+    output:
+        "{cancer_type}.done"
+    params:
+        # cluster = "-l h_vmem=32G "
+        cluster="--mem=32G -t 06:00:00"
+    shell:
+        """
+        # export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/cm/local/apps/gcc/9.2.0/lib64:/cm/local/apps/gcc/9.2.0/lib:/cm/shared/apps_chop/R/4.0.2/lib64/R/lib:/cm/shared/apps_chop/R/4.0.2/lib64/R:/cm/shared/apps_chop/jags/4.3.0/lib:/cm/shared/apps_chop/gsl/2.5/lib:/cm/shared/apps_chop/gdal/2.4.0/lib:/cm/shared/apps_chop/hdf5/1.10.4/lib:/cm/shared/apps_chop/jdk/1.8.0_144/jre/lib/amd64/server:/cm/shared/apps_chop/jdk/1.8.0_144/lib:/cm/shared/apps_chop/perl/5.26.1/lib:/cm/shared/easybuild/software/ScaLAPACK/2.0.2-gompi-2018b-OpenBLAS-0.3.1/lib:/cm/shared/easybuild/software/FFTW/3.3.8-gompi-2018b/lib:/cm/shared/easybuild/software/OpenBLAS/0.3.1-GCC-7.3.0-2.30/lib:/cm/shared/easybuild/software/OpenMPI/3.1.1-GCC-7.3.0-2.30/lib:/cm/shared/easybuild/software/hwloc/1.11.10-GCCcore-7.3.0/lib:/cm/shared/easybuild/software/libpciaccess/0.14-GCCcore-7.3.0/lib:/cm/shared/easybuild/software/libxml2/2.9.8-GCCcore-7.3.0/lib:/cm/shared/easybuild/software/XZ/5.2.4-GCCcore-7.3.0/lib:/cm/shared/easybuild/software/numactl/2.0.11-GCCcore-7.3.0/lib:/cm/shared/easybuild/software/zlib/1.2.11-GCCcore-7.3.0/lib:/cm/shared/easybuild/software/binutils/2.30-GCCcore-7.3.0/lib:/cm/shared/easybuild/software/GCCcore/7.3.0/lib/gcc/x86_64-pc-linux-gnu/7.3.0:/cm/shared/easybuild/software/GCCcore/7.3.0/lib64:/cm/shared/easybuild/software/GCCcore/7.3.0/lib:/cm/shared/apps_chop/sam-bcf-tools/1.6/lib:/cm/shared/apps/uge/8.6.12/lib/lx-amd64
+        module load R
+        module load GCC
+        Rscript {REPO_DIR}/generate_SPARKS_object.R \
+        --psi_SE rmats_stats_matrix/filtered_psi.matrix.{wildcards.cancer_type}.SE.csv \
+        --psi_A3SS rmats_stats_matrix/filtered_psi.matrix.{wildcards.cancer_type}.A3SS.csv \
+        --psi_A5SS rmats_stats_matrix/filtered_psi.matrix.{wildcards.cancer_type}.A5SS.csv \
+        --psi_RI rMATS_stats_matrix/filtered_psi.matrix.{wildcards.cancer_type}.RI.csv \
+        --exp {input.exp_matrix} \
+        --cancer_type {wildcards.cancer_type} \
+        --exon_anno_SE rmats_stats_matrix/AS_annotation.SE.{wildcards.cancer_type}.txt \
+        --exon_anno_A3SS rmats_stats_matrix/AS_annotation.A3SS.{wildcards.cancer_type}.txt \
+        --exon_anno_A5SS rmats_stats_matrix/AS_annotation.A5SS.{wildcards.cancer_type}.txt \
+        --exon_anno_RI rMATS_stats_matrix/AS_annotation.RI.{wildcards.cancer_type}.txt \
+        --MATS_SE rmats_stats_matrix/{wildcards.cancer_type}.SE.MATS_df.txt \
+        --MATS_A3SS rmats_stats_matrix/{wildcards.cancer_type}.A3SS.MATS_df.txt \
+        --MATS_A5SS rmats_stats_matrix/{wildcards.cancer_type}.A5SS.MATS_df.txt \
+        --MATS_RI rMATS_stats_matrix/{wildcards.cancer_type}.RI.MATS_df.txt \
+        --SPARKS_library {SPARKS_LIB_FILE}
+    
         touch {wildcards.cancer_type}.done
 
         """
