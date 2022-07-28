@@ -126,7 +126,7 @@ if (!(is.null(opt$SPARKS_library))){
     kd_library_all, 
     test_study = opt$cancer_type)
   print("Performing SPARKS analysis")
-  sparks_obj$SPARKS_analysis_result <<- analysis_result
+  sparks_obj$SPARKS_analysis_result <- analysis_result
 }
 
 
