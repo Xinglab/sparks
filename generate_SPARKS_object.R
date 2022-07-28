@@ -120,8 +120,8 @@ if (!(is.null(opt$MATS_RI))){
 }
 
 # perform SPARKS analysis if the option is used
-if (!(is.null(opt$sparks_library))){
-  kd_library_all <- readRDS(opt$sparks_library)
+if (!(is.null(opt$SPARKS_library))){
+  kd_library_all <- readRDS(opt$SPARKS_library)
   analysis_result <- perform_SPARKS_analysis_for_all_splice_types(sparks_obj, 
     kd_library_all, 
     test_study = opt$cancer_type)
