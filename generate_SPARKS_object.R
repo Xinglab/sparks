@@ -125,7 +125,8 @@ if (!(is.null(opt$sparks_library))){
   analysis_result <- perform_SPARKS_analysis_for_all_splice_types(sparks_obj, 
     kd_library_all, 
     test_study = opt$cancer_type)
-  sparks_obj$SPARKS_analysis_result <- analysis_result
+  print("Performing SPARKS analysis")
+  sparks_obj$SPARKS_analysis_result <<- analysis_result
 }
 
 
