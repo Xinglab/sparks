@@ -15,7 +15,7 @@ calculate_benchmark_rank <- function(result_df){
 
 
     # calculate rank
-    target_result_df$lincor_rank <- rank(-target_result_df$score_abs)
+    target_result_df$lincor_rank <- rank(-target_result_df$score)
     target_result_df$concord_rank <- rank(-target_result_df$concordance)
     target_result_df$gsea_rank <- rank(-target_result_df$gsea_score)
     return(target_result_df)
@@ -76,8 +76,8 @@ k562_hepg2_benchmark_result_list <- list()
 
 all_cdf_plot_df <- do.call(rbind, lapply(spl_types, function(spl_type){
   print(spl_type)
-  input_file <- sprintf('/Users/harryyang/research/Xing_Lab/sparks/data/benchmark_result.shRNA.%s.df.txt', spl_type)
-  # input_file <- sprintf('/Users/harryyang/research/Xing_Lab/sparks/data/benchmark_result.CRISPR.%s.df.txt', spl_type)
+  # input_file <- sprintf('/Users/harryyang/research/Xing_Lab/sparks/data/benchmark_result.shRNA.%s.df.txt', spl_type)
+  input_file <- sprintf('/Users/harryyang/research/Xing_Lab/sparks/data/benchmark_result.CRISPR.%s.df.txt', spl_type)
 
   benchmark_result_df <- as.data.frame(data.table::fread(input_file))
 
@@ -142,8 +142,8 @@ ggplot(all_cdf_plot_df, aes(x = rank, y = count, color = method)) + geom_point()
   scale_color_discrete(labels = new_test_names) +
   scale_x_continuous(breaks = seq(-1, 10),
                      limits = c(1, 10)) +
-  scale_y_continuous(limits = c(0, 90), breaks = c(seq(0, 6) * 15)) +  # scale for shRNA KD
-  # scale_y_continuous(limits = c(0, 35), breaks = c(seq(0, 7) * 5)) +  # scale for CRISPR KD
+  # scale_y_continuous(limits = c(0, 90), breaks = c(seq(0, 6) * 15)) +  # scale for shRNA KD
+  scale_y_continuous(limits = c(0, 35), breaks = c(seq(0, 7) * 5)) +  # scale for CRISPR KD
   labs(x = "Rank of the target RBP from each method",
        y = "Cumulative Sum of RBP KD Experiments",
        color = "Method") +
