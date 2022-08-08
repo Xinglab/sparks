@@ -87,8 +87,8 @@ extract_GSEA_significant_events <- function(study_mats){
 
 #' @export
 perform_SPARKS_analysis_for_all_splice_types <- function(input_start, kd_library_all,
-                                                        test_study = "", score_method = "GSEA",
-                                                        subset_group_1 = c(), subset_group_2 = c()){
+                                                         test_study = "", score_method = "GSEA",
+                                                         subset_group_1 = c(), subset_group_2 = c()){
 
   spl_types <- c("SE", "A3SS", "A5SS")
 
@@ -406,3 +406,117 @@ add_custom_study_to_library <- function(kd_library_all,
 
   return(kd_library_all)
 }
+
+#' @export
+import_custom_study_as_SPARKS_library <- function(input_SPARKS_file,
+                                                  input_study,
+                                                  subset_group_1 = c(),
+                                                  subset_group_2 = c()){
+  # read SPARKS data
+  input_start <- readRDS(input_SPARKS_file)
+
+  spl_types <- c("SE", "A3SS", "A5SS")
+
+  concordant_mats_list <- list()
+
+  # make slots
+  concordant_mats_list[['SE']] <- list()
+  concordant_mats_list[['A3SS']] <- list()
+  concordant_mats_list[['A5SS']] <- list()
+
+
+  dummy <- lapply(spl_types, function(spl_type){
+    print(sprintf("Importing %s for %s", spl_type, input_study))
+
+    input_mats_filtered <- import_SPARKS_MATS_for_analysis(input_start, spl_type = spl_type, count_threshold = 20)
+
+    # subset option if input necessitates it
+    if (length(subset_group_1) > 0 | length(subset_group_2) > 0){  # if subset option is used
+      # validate the length for both
+      if (length(subset_group_1) == 0 | length(subset_group_2) == 0){  # if one group is not specified
+        stop("One of the subset group is undefined - please check your input")
+      }
+      # perform subset operation
+      input_mats_filtered <- calculate_new_psi_for_subset_of_samples(input_mats_filtered,
+                                                                     subset_group_1,
+                                                                     subset_group_2)
+    }
+
+    input_mats_sorted <- input_mats_filtered[rev(order(input_mats_filtered$beta)), ]
+
+
+    concordant_mats <- subset(input_mats_sorted, abs(beta - pulled_delta_psi) < 0.1)
+
+    # change beta
+    concordant_mats$mean_beta <- concordant_mats$beta
+    concordant_mats$beta <- concordant_mats$pulled_delta_psi
+
+
+    concordant_mats_list[[spl_type]][[input_study]] <<- concordant_mats
+    # discordant_mats_list[[study]] <<- discordant_mats
+    return()
+  })
+
+  return(concordant_mats_list)
+}
+
+#' @export
+generate_SPARKS_result_with_custom_library_results <- function(input_sparks,
+                                                               custom_test_result){
+
+  input_test_result <- input_sparks@SPARKS_analysis_result
+  # add this to the original library data
+  combined_test_result <- list()
+  dummy <- lapply(spl_types, function(spl_type){
+    # load result for each type
+    custom_test_result_spl_type <- custom_test_result[[spl_type]]
+    original_test_result_spl_type <- input_test_result[[spl_type]]
+
+    # combine the result
+    combined_result_spl_type <- rbind(custom_test_result_spl_type,
+                                      original_test_result_spl_type)
+
+    # recalculate rank
+    combined_result_spl_type$rank <- ceiling(rank(-combined_result_spl_type$gsea_score))  # TODO - change this code for other methods?
+
+    # update the dataframe
+    combined_test_result[[spl_type]] <<- combined_result_spl_type
+    return()
+  })
+  return(combined_test_result)
+}
+
+
+#' @export
+merge_custom_SPARKS_libraries <- function(custom_library_list){
+
+  # read SPARKS data
+  spl_types <- c("SE", "A3SS", "A5SS")
+
+  merged_mats_list <- list()
+
+  # make slots
+  merged_mats_list[['SE']] <- list()
+  merged_mats_list[['A3SS']] <- list()
+  merged_mats_list[['A5SS']] <- list()
+
+  input_study_list <- unlist(lapply(custom_library_list, function(x) names(x[['SE']])))
+
+  dummy <- lapply(spl_types, function(spl_type){
+    dummy2 <- lapply(seq(length(custom_library_list)), function(idx){  # access by index for easier processing
+      input_study <- input_study_list[idx]
+      print(sprintf("Merging %s for %s", spl_type, input_study))
+
+      # access the correct study mats
+      library_mats <- custom_library_list[[idx]][[spl_type]][[input_study]]
+
+      merged_mats_list[[spl_type]][[input_study]] <<- library_mats
+
+      return()
+    })
+    return()
+  })
+
+  return(merged_mats_list)
+}
+
