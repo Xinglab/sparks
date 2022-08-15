@@ -222,11 +222,11 @@ rule gather_case_ctrl_samples_for_stat:
         cwd = os.getcwd()
         with open(output.case_sample_list, 'w') as f:
             output_sample_list = [ "%s/%s" % (cwd, x) for x in input.case_bams ]
-            output_string = ",".join(output_sample_list)
+            output_string = ",".join(sorted(output_sample_list))
             f.write(output_string)
         with open(output.ctrl_sample_list, 'w') as f:
             output_sample_list = [ "%s/%s" % (cwd, x) for x in input.ctrl_bams ]
-            output_string = ",".join(output_sample_list)
+            output_string = ",".join(sorted(output_sample_list))
             f.write(output_string)
 
 rule gather_case_ctrl_samples_wo_stat:
