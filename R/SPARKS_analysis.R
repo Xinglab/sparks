@@ -465,6 +465,14 @@ generate_SPARKS_result_with_custom_library_results <- function(input_sparks,
                                                                custom_test_result){
 
   input_test_result <- input_sparks@SPARKS_analysis_result
+  combined_test_result <- add_custom_library_result_to_SPARKS_result(input_test_result,
+                                                                     custom_test_result)
+  return(combined_test_result)
+}
+
+#' @export
+add_custom_library_result_to_SPARKS_result <- function(input_test_result,
+                                                       custom_test_result){
   # add this to the original library data
   combined_test_result <- list()
   dummy <- lapply(spl_types, function(spl_type){
@@ -485,7 +493,6 @@ generate_SPARKS_result_with_custom_library_results <- function(input_sparks,
   })
   return(combined_test_result)
 }
-
 
 #' @export
 merge_custom_SPARKS_libraries <- function(custom_library_list){

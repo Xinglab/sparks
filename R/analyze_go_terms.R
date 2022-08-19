@@ -173,11 +173,11 @@ get_enrichr_GO <- function(all_gene_list, significant_genes){
 recalculate_GO <- function(all_gene_list, significant_genes, GO_process = "BP") {
   library(enrichR)
   if (GO_process == "BP") {
-    go_db = "GO_Biological_Process_2018"
+    go_db = "GO_Biological_Process_2021"
   }  else if (GO_process == "CC"){
-    go_db = "GO_Cellular_Component_2018"
+    go_db = "GO_Cellular_Component_2021"
   }  else if (GO_process == "MF"){
-    go_db = "GO_Molecular_Function_2018"
+    go_db = "GO_Molecular_Function_2021"
   }
   all_gene_GO <- enrichr(as.vector(all_gene_list), databases = go_db)
   sig_gene_GO <- enrichr(as.vector(significant_genes), databases = go_db)
