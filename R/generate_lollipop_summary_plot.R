@@ -670,6 +670,8 @@ generate_strip_lollipop_plot_vertical <- function(test_result_list,
   return(p_combined)
 }
 
+
+
 #' Add title to combined plot
 #'
 #' @export

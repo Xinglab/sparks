@@ -1,0 +1,8 @@
+ln -sf ~/xinglab/tools/SPARKS/master.smk snakefile
+ln -sf ~/xinglab/tools/SPARKS/generate_SPARKS_object.R .
+cp -vf ~/xinglab/tools/SPARKS/config.yaml .
+
+ls fastq/*.fastq.gz | awk -F '/' '{print $2}' | awk -F '.' '{print $1}' | sort | uniq
+vi config.yaml
+
+snakemake --cluster 'sbatch {params.cluster} -e ./logs/{rulename}.{jobid}.e%A -o ./logs/{rulename}.{jobid}.o%A ' Myc_ICA.done --jobs 200 --latency-wait 80 --jobname '{study}.{rulename}.{jobid}' --keep-going --ri

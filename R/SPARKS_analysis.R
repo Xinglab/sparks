@@ -527,3 +527,118 @@ merge_custom_SPARKS_libraries <- function(custom_library_list){
   return(merged_mats_list)
 }
 
+
+
+#' @export
+append_SPARKS_mats_for_all_splice_type <- function(mats_list,
+                                                   input_start,
+                                                   input_study){
+  # make the slot for input
+  mats_list[[input_study]] <- list()
+
+  dummy <- lapply(spl_types, function(spl_type){
+    input_study_mats <- import_SPARKS_MATS_for_analysis(input_start, spl_type)
+
+    # append the result for downstream analysis
+    mats_list[[input_study]][[spl_type]] <<- input_study_mats
+  })
+
+  return(mats_list)
+}
+
+
+#' @export
+append_SPARKS_result_for_all_splice_type <- function(result_list,
+                                                     input_start,
+                                                     input_study){
+  # make the slot for input
+  result_list[[input_study]] <- list()
+
+  input_result_list <- input_start@SPARKS_analysis_result
+
+  # append the result for downstream analysis
+  result_list[[input_study]] <- input_result_list
+
+
+  return(result_list)
+}
+
+
+
+#' @export
+append_SPARKS_expression <- function(expression_list,
+                                     input_start,
+                                     input_study){
+  # make the slot for input
+  expression_list[[input_study]] <- list()
+
+  input_expression_list <- input_start@exp_df
+
+  # append the expression for downstream analysis
+  expression_list[[input_study]] <- input_expression_list
+
+
+  return(expression_list)
+}
+
+
+
+#' @export
+generate_subset_SPARKS <- function(input_start,
+                                   kd_library_all,
+                                   subset_study,
+                                   sample_one_id,
+                                   sample_two_id){
+  # make copy
+  subset_start <- input_start
+
+  # identify the index for the sample for the subset
+  sample_idx_one <- which(startsWith(rownames(input_start@sample_chart), sample_one_id))
+  sample_idx_two <- which(startsWith(rownames(input_start@sample_chart), sample_two_id))
+
+  # subset the PSI values
+  dummy <- lapply(spl_types, function(spl_type){
+    print(sprintf("Subsetting PSI df for %s", spl_type))
+    full_psi_df <- input_start@psi_df[[spl_type]]
+    subset_psi_df <- full_psi_df[, c(sample_idx_one, sample_idx_two)]
+    # append the result for downstream analysis
+    subset_start@psi_df[[spl_type]] <<- subset_psi_df
+    return()
+  })
+
+  # subset the MATS
+  dummy <- lapply(spl_types, function(spl_type){
+    print(sprintf("Subsetting MATS df for %s", spl_type))
+
+    full_mats_df <- import_SPARKS_MATS_for_analysis(input_start, spl_type)
+    subset_mats_df <- calculate_new_psi_for_subset_of_samples(full_mats_df,
+                                                              sample_idx_one,
+                                                              sample_idx_two)
+    # append the result for downstream analysis
+    subset_start@MATS_list[[spl_type]] <<- subset_mats_df
+  })
+
+  print("Performing SPARKS Analysis for the subset")
+
+  # update SPARKS analysis result
+  subset_sparks_result <- perform_SPARKS_analysis_for_all_splice_types(subset_start,
+                                                                       kd_library_all,
+                                                                       subset_study)
+  subset_start@SPARKS_analysis_result <- subset_sparks_result
+
+  print("Subsetting Expression df for the subset")
+  # subset the expression values
+  # calculate new index, as this may be different since it was randomized in python process
+  full_exp_df <- input_start@exp_df
+  exp_sample_idx_one <- which(startsWith(colnames(full_exp_df), sample_one_id))
+  exp_sample_idx_two <- which(startsWith(colnames(full_exp_df), sample_two_id))
+
+  subset_exp_df <- full_exp_df[, c(exp_sample_idx_one, exp_sample_idx_two)]
+  # append the result for downstream analysis
+  subset_start@exp_df <- subset_exp_df
+
+  # update study
+  subset_start@study <- subset_study
+
+  return(subset_start)
+}

@@ -1,0 +1,11 @@
+ln -sf ~/xinglab/tools/SPARKS/master.smk snakefile
+ln -sf ~/xinglab/tools/SPARKS/generate_SPARKS_object.R .
+
+# add analysis mode 
+echo "analysis_mode : True" >> config.yaml
+
+study=$(ls *.done | awk -F '.done' '{print $1}')
+rm ${study}.done
+
+snakemake --cluster 'sbatch {params.cluster} -e ./logs/{rulename}.{jobid}.e%A -o ./logs/{rulename}.{jobid}.o%A ' ${study}.done --jobs 200 --latency-wait 80 --jobname '{study}.{rulename}.{jobid}' --keep-going --ri --reason -n
+

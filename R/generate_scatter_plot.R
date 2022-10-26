@@ -5,7 +5,8 @@ generate_RBP_KD_correlation_scatter_plot <- function(s1_mats_df,
                                                      study_2,
                                                      beta_threshold = 0.1,
                                                      permute = FALSE,
-                                                     fdr = FALSE
+                                                     fdr = FALSE,
+                                                     slope = FALSE
 ){
 
   # merge each mats by event
@@ -121,22 +122,45 @@ generate_RBP_KD_correlation_scatter_plot <- function(s1_mats_df,
     labs(x = sprintf("Delta PSI\n%s", paste0(strsplit(study_1, "_")[[1]], collapse = " ")),
          y = sprintf("%s\nDelta PSI", paste0(strsplit(study_2, "_")[[1]], collapse = " "))) + #,
     # subtitle = sprintf("Rsquared = %s", round(rsq, 4))) +
-    annotate("text", x = min_coord + 0.2, y = max_coord - 0.2, label = substitute(italic(R)^2~"="~r2,
-                                                                                  list(r2 = format(rsq, digits = 3))),
-                                                                                  size = 3)+
-               geom_abline(intercept = 0, slope = correlation_value, alpha = 0.5, linetype = "F1", color = "dodgerblue2", size = 0.8) +
-               theme_bw() +
-               theme(axis.text.y   = element_text(size = 8),
-                     axis.text.x   = element_text(size = 8),
-                     axis.title.y  = element_text(size = 10),
-                     axis.title.x  = element_text(size = 10),
-                     panel.background = element_blank(),
-                     panel.grid.major = element_blank(),
-                     panel.grid.minor = element_blank(),
-                     panel.border = element_rect(color = "black",
-                                                 fill = NA,
-                                                 size = 1)
-               )
 
-             return(p)
+    geom_abline(intercept = 0, slope = correlation_value, alpha = 0.5, linetype = "F1", color = "dodgerblue2", size = 0.8) +
+    theme_bw() +
+    theme(axis.text.y   = element_text(size = 8),
+          axis.text.x   = element_text(size = 8),
+          axis.title.y  = element_text(size = 10),
+          axis.title.x  = element_text(size = 10),
+          panel.background = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_rect(color = "black",
+                                      fill = NA,
+                                      size = 1)
+    )
+
+
+  # add the annotations
+  if(!slope){
+    p <- p +
+      annotate("text", x = min_coord + 0.2,
+               y = max_coord - 0.2,
+               label = substitute(italic(R)^2~"="~r2,
+                                  list(r2 = format(rsq, digits = 3))),
+               size = 3)
+  } else {  # add slope
+    p <- p +
+      annotate("text", x = min_coord + 0.2,
+               y = max_coord - 0.2,
+               label = substitute(italic(R)^2~"="~r2,
+                                  list(r2 = format(rsq, digits = 3))),
+               size = 3) +
+      annotate("text", x = min_coord + 0.2,
+               y = max_coord - 0.30,
+               label = substitute("m ="~slop,
+                                  list(slop = format(correlation_value, digits = 3))),
+               size = 3)
+
+
+  }
+
+  return(p)
 }
