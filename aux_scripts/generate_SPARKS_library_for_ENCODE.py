@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import sys
 
-snakedir = "/home/yangt3/xinglab/tools/SPARKS/"
+# snakedir = "/home/yangt3/xinglab/tools/SPARKS/"  # TODO
 
 input_df = pd.read_csv('metadata.tsv', sep='\t')
 
@@ -52,7 +52,7 @@ sample_project = ["%s_%s_%s" % (x['Biosample term name'],
 input_df = input_df.assign(sample_file=sample_name)
 input_df = input_df.assign(sample_project=sample_project)
 
-control_dir = "/home/yangt3/xinglab/ENCODE/%s/control/" % experiment_type
+# control_dir = "/home/yangt3/xinglab/ENCODE/%s/control/" % experiment_type # TODO
 
 # make script dir 
 script_dir = "./scripts"

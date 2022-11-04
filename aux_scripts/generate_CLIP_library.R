@@ -6,8 +6,8 @@ spl_type <- "SE"
 # local debug
 # input_dir <- "/Users/harryyang/research/Xing_Lab/START/analysis/CLIP"
 # clip_exp_list <- read.csv('/Users/harryyang/research/Xing_Lab/START/analysis/clip_exp_list.txt', header = F)$V1
-input_dir <- "/home/yangt3/xinglab/ENCODE/START/run/library/"
-clip_exp_list <- read.csv('/home/yangt3/xinglab/ENCODE/bed/clip_exp_list.txt', header = F)$V1
+## input_dir <- "/home/yangt3/xinglab/ENCODE/START/run/library/" # TODO
+## clip_exp_list <- read.csv('/home/yangt3/xinglab/ENCODE/bed/clip_exp_list.txt', header = F)$V1 # TODO
 input_start_files <- Sys.glob(sprintf("%s/*.START.rds", input_dir))
 
 # make lists for processings

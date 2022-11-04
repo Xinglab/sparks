@@ -3,7 +3,7 @@ library(SPARKS)
 library(ggplot2)
 
 # import library for analysis
-kd_library_all <- readRDS('/home/yangt3/xinglab/ENCODE/SPARKS/ENCODE_library.KD_and_KO.count_20.rds')
+## kd_library_all <- readRDS('/home/yangt3/xinglab/ENCODE/SPARKS/ENCODE_library.KD_and_KO.count_20.rds') # TODO
 
 output_dir <- "./"
 count_threshold <- 20
