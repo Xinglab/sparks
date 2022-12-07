@@ -54,6 +54,127 @@ perform_SPARKS_analysis <- function(study_mats, kd_library, study, method = "GSE
 
 
 #' @export
+perform_SPARKS_analysis_with_significance <- function(study_mats, kd_library, study,  method = "GSEA", num_cores = 3, num_MC = 100){
+  
+  # divide pos events and neg events for GSEA query
+  n_test <- 1000
+
+  # query null events
+  event_list <- list()
+
+  # extract all sig events in the library
+  dummy <- lapply(names(kd_library), function(experiment){
+    sig_events <- unlist(extract_GSEA_significant_events(kd_library[[experiment]]))
+    event_list[[length(event_list) + 1]] <<- sig_events
+    return()
+  })
+
+  # geenrate list and weight for them 
+  null_event <- unique(unlist(event_list))
+  null_weight <- table(unlist(event_list))
+
+  # calculate correlation for signature
+  test_result_df <- do.call(rbind, pbmcapply::pbmclapply(names(kd_library), function(signature){
+    print(signature)
+    # test_result_df <- do.call(rbind, lapply(names(kd_library), function(signature){
+    
+    # print(signature)
+    test_mats <- kd_library[[signature]]
+    
+    # calculate Rho-based enrichment score
+    result_df <- calculate_RBP_KD_correlation_from_mats(test_mats, study_mats, signature, study, num_permutation = 100, beta_threshold = 0.1)
+    
+    # calculate Tau-based enrichment score
+    concord_result_df <- calculate_RBP_KD_concordance_from_mats(test_mats, study_mats, signature, study)
+    
+    # merge Tau result with Rho result
+    result_df$concordance <- concord_result_df$score
+    result_df$concordance_abs <- concord_result_df$score_abs
+    
+    # calculate GSEA-based enrichment score
+    # flip the direciton 
+    test_mats_event_list <- extract_GSEA_significant_events(test_mats)
+    test_mats_pos <- test_mats_event_list$positive
+    test_mats_neg <- test_mats_event_list$negative
+
+    # run the analysis for N times 
+    score_dist <- do.call(rbind, lapply(seq(1, n_test), function(ind){
+      gsea_score_pos_neg <- calculate_GSEA_score_sampling(study_mats, test_mats_pos, test_mats_neg, sampling_size = num_MC)
+      gsea_score_non_sig <- calculate_GSEA_score_sampling_1d_weight(study_mats, null_event, null_weight, sampling_size = num_MC)
+      
+      score_df <- data.frame(positive = gsea_score_pos_neg$pos_score,
+                             negative = gsea_score_pos_neg$neg_score,
+                             null = gsea_score_non_sig)
+    }))
+    
+    pos_sig_dist <- score_dist$positive
+    neg_sig_dist <- score_dist$negative
+    nonsig_dist <- score_dist$null
+    
+    ## calculate permutation p-value
+    # calculate null values
+    null_upper_score <- quantile(nonsig_dist, c(0.95))
+    null_lower_score <- quantile(nonsig_dist, c(0.05))
+    null_mean_score <- mean(nonsig_dist)
+    
+    # calculate both directions for pos and neg
+    pos_upper_count <- sum(pos_sig_dist > null_upper_score)
+    pos_lower_count <- sum(pos_sig_dist < null_lower_score)
+    pos_mean_score <- mean(pos_sig_dist)
+    
+    neg_upper_count <- sum(neg_sig_dist > null_upper_score)
+    neg_lower_count <- sum(neg_sig_dist < null_lower_score)
+    neg_mean_score <- mean(neg_sig_dist)
+    
+    if(pos_upper_count + neg_lower_count > pos_lower_count + neg_upper_count){ # if positive enrichment
+      p_perm_pos <- max(1, (n_test - pos_upper_count)) / n_test # technically p-value lower bound is 1/N
+      p_perm_neg <- max(1, (n_test - neg_lower_count)) / n_test
+    } else { # if negative enrichment
+      p_perm_pos <- max(1, (n_test - pos_lower_count)) / n_test
+      p_perm_neg <- max(1, (n_test - neg_upper_count)) / n_test
+    }
+    p_perm <- metap::sumlog(c(p_perm_pos, p_perm_neg))$p
+    
+    # calculate total score
+    total_score <- pos_mean_score - neg_mean_score
+    
+    
+    
+    # merge GSEA result to total result
+    result_df$gsea_pos_score <- pos_mean_score
+    result_df$gsea_neg_score <- neg_mean_score
+    result_df$gsea_score <- total_score
+    result_df$gsea_score_abs <- abs(total_score)
+    result_df$gsea_null_upper <- null_upper_score
+    result_df$gsea_null_lower <- null_lower_score
+    result_df$gsea_pos_upper <- pos_upper_count
+    result_df$gsea_pos_lower <- pos_lower_count
+    result_df$gsea_neg_upper <- neg_upper_count
+    result_df$gsea_neg_lower <- neg_lower_count
+    result_df$gsea_combined_pval <- p_perm
+    
+    
+    return(result_df)
+  }, mc.cores = num_cores))
+  
+  ### calculate RANK for downstream analysis
+  if (method == "GSEA"){
+    test_result_df$rank <- rank(-test_result_df$gsea_score_abs)
+    test_result_df$plot_score <- test_result_df$gsea_score_abs
+  } else if (method == "Pearson"){
+    test_result_df$rank <- rank(-test_result_df$score_abs)
+    test_result_df$plot_score <- test_result_df$score_abs
+  } else if (method == "Kendall"){
+    test_result_df$rank <- rank(-test_result_df$concordance_abs)
+    test_result_df$plot_score <- test_result_df$concordance_abs
+  }
+  
+  return(test_result_df)
+}
+
+
+
+#' @export
 import_SPARKS_MATS_for_analysis <- function(input_start, spl_type, count_threshold = 20){
   # process the data for analysis
   known_events <- rownames(subset(input_start@exon_annotation[[spl_type]], annotation == "Known_JC"))
