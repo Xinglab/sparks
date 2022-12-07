@@ -173,6 +173,50 @@ perform_SPARKS_analysis_with_significance <- function(study_mats, kd_library, st
 }
 
 
+calculate_GSEA_score_sampling <- function(input_signature_list, test_pos_events, test_neg_events, sampling_size = 100){
+  pos_overlap_list <- test_pos_events[test_pos_events %in% input_signature_list$event]
+  pos_overlap_list_sample <- sample(pos_overlap_list, min(sampling_size, length(pos_overlap_list)))
+  if (length(pos_overlap_list) > 0){
+    pos_result <- GSEA.EnrichmentScore(input_signature_list$event, pos_overlap_list_sample, weighted.score.type = 0)
+    pos_stat <- pos_result$ES
+  } else {
+    pos_stat <- 0
+  }
+  
+  neg_overlap_list <- test_neg_events[test_neg_events %in% input_signature_list$event]
+  neg_overlap_list_sample <- sample(neg_overlap_list, min(sampling_size, length(neg_overlap_list)))
+  
+  if (length(neg_overlap_list) > 0){
+    neg_result <- GSEA.EnrichmentScore(input_signature_list$event, neg_overlap_list_sample, weighted.score.type = 0)
+    neg_stat <- neg_result$ES
+  } else {
+    neg_stat <- 0
+  }
+  
+  result_df <- data.frame(pos_score = pos_stat,
+                          neg_score = neg_stat)
+  return(result_df)
+}
+
+
+calculate_GSEA_score_sampling_1d_weight <- function(input_signature_list, non_sig_events, weight, sampling_size = 100){
+  overlap_list <- non_sig_events[non_sig_events %in% input_signature_list$event]
+  
+  tot_overlap_list_sample <- sample(overlap_list, min(sampling_size, length(overlap_list)), prob = weight[overlap_list])
+  
+  if (length(tot_overlap_list_sample) > 0){
+    neg_result <- GSEA.EnrichmentScore(input_signature_list$event, tot_overlap_list_sample, weighted.score.type = 0)
+    neg_stat <- neg_result$ES
+  } else {
+    neg_stat <- 0
+  }
+  
+  score <- neg_stat
+  return(score)
+}
+
+
+
 
 #' @export
 import_SPARKS_MATS_for_analysis <- function(input_start, spl_type, count_threshold = 20){
