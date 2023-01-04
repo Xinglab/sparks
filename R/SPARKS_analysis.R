@@ -892,7 +892,7 @@ perform_SPARKS_analysis_competitive_gsea <- function(study_mats,
   names(study_rank) <- study_mats_clean$event
 
   # calculate correlation for signature
-  test_result_df <- do.call(rbind, pbmcapply::pbmclapply(names(kd_library_spltype), function(signature){
+  test_result_df <- do.call(rbind, pbmcapply::pbmclapply(names(kd_library), function(signature){
 
     print(signature)
     # filter out by count
