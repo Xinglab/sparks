@@ -55,7 +55,7 @@ perform_SPARKS_analysis <- function(study_mats, kd_library, study, method = "GSE
 
 #' @export
 perform_SPARKS_analysis_with_significance <- function(study_mats, kd_library, study,  method = "GSEA", num_cores = 3, num_MC = 100){
-  
+
   # divide pos events and neg events for GSEA query
   n_test <- 1000
 
@@ -69,7 +69,7 @@ perform_SPARKS_analysis_with_significance <- function(study_mats, kd_library, st
     return()
   })
 
-  # geenrate list and weight for them 
+  # geenrate list and weight for them
   null_event <- unique(unlist(event_list))
   null_weight <- table(unlist(event_list))
 
@@ -77,55 +77,55 @@ perform_SPARKS_analysis_with_significance <- function(study_mats, kd_library, st
   test_result_df <- do.call(rbind, pbmcapply::pbmclapply(names(kd_library), function(signature){
     print(signature)
     # test_result_df <- do.call(rbind, lapply(names(kd_library), function(signature){
-    
+
     # print(signature)
     test_mats <- kd_library[[signature]]
-    
+
     # calculate Rho-based enrichment score
     result_df <- calculate_RBP_KD_correlation_from_mats(test_mats, study_mats, signature, study, num_permutation = 100, beta_threshold = 0.1)
-    
+
     # calculate Tau-based enrichment score
     concord_result_df <- calculate_RBP_KD_concordance_from_mats(test_mats, study_mats, signature, study)
-    
+
     # merge Tau result with Rho result
     result_df$concordance <- concord_result_df$score
     result_df$concordance_abs <- concord_result_df$score_abs
-    
+
     # calculate GSEA-based enrichment score
-    # flip the direciton 
+    # flip the direciton
     test_mats_event_list <- extract_GSEA_significant_events(test_mats)
     test_mats_pos <- test_mats_event_list$positive
     test_mats_neg <- test_mats_event_list$negative
 
-    # run the analysis for N times 
+    # run the analysis for N times
     score_dist <- do.call(rbind, lapply(seq(1, n_test), function(ind){
       gsea_score_pos_neg <- calculate_GSEA_score_sampling(study_mats, test_mats_pos, test_mats_neg, sampling_size = num_MC)
       gsea_score_non_sig <- calculate_GSEA_score_sampling_1d_weight(study_mats, null_event, null_weight, sampling_size = num_MC)
-      
+
       score_df <- data.frame(positive = gsea_score_pos_neg$pos_score,
                              negative = gsea_score_pos_neg$neg_score,
                              null = gsea_score_non_sig)
     }))
-    
+
     pos_sig_dist <- score_dist$positive
     neg_sig_dist <- score_dist$negative
     nonsig_dist <- score_dist$null
-    
+
     ## calculate permutation p-value
     # calculate null values
     null_upper_score <- quantile(nonsig_dist, c(0.95))
     null_lower_score <- quantile(nonsig_dist, c(0.05))
     null_mean_score <- mean(nonsig_dist)
-    
+
     # calculate both directions for pos and neg
     pos_upper_count <- sum(pos_sig_dist > null_upper_score)
     pos_lower_count <- sum(pos_sig_dist < null_lower_score)
     pos_mean_score <- mean(pos_sig_dist)
-    
+
     neg_upper_count <- sum(neg_sig_dist > null_upper_score)
     neg_lower_count <- sum(neg_sig_dist < null_lower_score)
     neg_mean_score <- mean(neg_sig_dist)
-    
+
     if(pos_upper_count + neg_lower_count > pos_lower_count + neg_upper_count){ # if positive enrichment
       p_perm_pos <- max(1, (n_test - pos_upper_count)) / n_test # technically p-value lower bound is 1/N
       p_perm_neg <- max(1, (n_test - neg_lower_count)) / n_test
@@ -134,12 +134,12 @@ perform_SPARKS_analysis_with_significance <- function(study_mats, kd_library, st
       p_perm_neg <- max(1, (n_test - neg_upper_count)) / n_test
     }
     p_perm <- metap::sumlog(c(p_perm_pos, p_perm_neg))$p
-    
+
     # calculate total score
     total_score <- pos_mean_score - neg_mean_score
-    
-    
-    
+
+
+
     # merge GSEA result to total result
     result_df$gsea_pos_score <- pos_mean_score
     result_df$gsea_neg_score <- neg_mean_score
@@ -152,11 +152,11 @@ perform_SPARKS_analysis_with_significance <- function(study_mats, kd_library, st
     result_df$gsea_neg_upper <- neg_upper_count
     result_df$gsea_neg_lower <- neg_lower_count
     result_df$gsea_combined_pval <- p_perm
-    
-    
+
+
     return(result_df)
   }, mc.cores = num_cores))
-  
+
   ### calculate RANK for downstream analysis
   if (method == "GSEA"){
     test_result_df$rank <- rank(-test_result_df$gsea_score_abs)
@@ -168,7 +168,7 @@ perform_SPARKS_analysis_with_significance <- function(study_mats, kd_library, st
     test_result_df$rank <- rank(-test_result_df$concordance_abs)
     test_result_df$plot_score <- test_result_df$concordance_abs
   }
-  
+
   return(test_result_df)
 }
 
@@ -182,17 +182,17 @@ calculate_GSEA_score_sampling <- function(input_signature_list, test_pos_events,
   } else {
     pos_stat <- 0
   }
-  
+
   neg_overlap_list <- test_neg_events[test_neg_events %in% input_signature_list$event]
   neg_overlap_list_sample <- sample(neg_overlap_list, min(sampling_size, length(neg_overlap_list)))
-  
+
   if (length(neg_overlap_list) > 0){
     neg_result <- GSEA.EnrichmentScore(input_signature_list$event, neg_overlap_list_sample, weighted.score.type = 0)
     neg_stat <- neg_result$ES
   } else {
     neg_stat <- 0
   }
-  
+
   result_df <- data.frame(pos_score = pos_stat,
                           neg_score = neg_stat)
   return(result_df)
@@ -201,16 +201,16 @@ calculate_GSEA_score_sampling <- function(input_signature_list, test_pos_events,
 
 calculate_GSEA_score_sampling_1d_weight <- function(input_signature_list, non_sig_events, weight, sampling_size = 100){
   overlap_list <- non_sig_events[non_sig_events %in% input_signature_list$event]
-  
+
   tot_overlap_list_sample <- sample(overlap_list, min(sampling_size, length(overlap_list)), prob = weight[overlap_list])
-  
+
   if (length(tot_overlap_list_sample) > 0){
     neg_result <- GSEA.EnrichmentScore(input_signature_list$event, tot_overlap_list_sample, weighted.score.type = 0)
     neg_stat <- neg_result$ES
   } else {
     neg_stat <- 0
   }
-  
+
   score <- neg_stat
   return(score)
 }
@@ -806,4 +806,201 @@ generate_subset_SPARKS <- function(input_start,
   subset_start@study <- subset_study
 
   return(subset_start)
+}
+
+
+#' @export
+#'
+calculate_fgsea_score <- function(gsea_library, study_rank){
+  # calculate score using fgsea
+  gsea_result <- fgsea::fgsea(pathways = gsea_library ,
+                              stats = study_rank,
+                              nproc = 1)
+
+  # return 0 values if the method fails to run on either pos or neg
+  if(dim(gsea_result)[1] < 2){
+    output_df <- data.frame(score = 0,
+                            pos_score = 0,
+                            neg_score = 0,
+                            pos_pval = 0,
+                            neg_pval = 0,
+                            pval = 1)
+    return(output_df)
+  }
+
+
+  # gather the data
+
+  # combine score
+  neg_score <- subset(gsea_result, pathway == "negative")$ES
+  pos_score <- subset(gsea_result, pathway == "positive")$ES
+
+  combined_score <- pos_score - neg_score
+
+  # combine pval
+  neg_pval <- subset(gsea_result, pathway == "negative")$pval
+  pos_pval <- subset(gsea_result, pathway == "positive")$pval
+  # print(neg_pval)
+  # print(gsea_result)
+
+
+  if(is.na(neg_pval) | is.na(pos_pval)){
+    combined_pval <- 1
+  } else {
+    fisher_result <- metap::sumlog(c(neg_pval, pos_pval))
+    combined_pval <- fisher_result$p
+  }
+
+  output_df <- data.frame(score = combined_score,
+                          pos_score = pos_score,
+                          neg_score = neg_score,
+                          pos_pval = pos_pval,
+                          neg_pval = neg_pval,
+                          pval = combined_pval)
+  return(output_df)
+}
+
+
+
+#' @export
+perform_SPARKS_analysis_competitive_gsea <- function(study_mats,
+                                                     kd_library, study,
+                                                     method = "GSEA",
+                                                     num_cores = 3,
+                                                     overlap_threshold = 50){
+  n_test < 100
+  # query null events
+  event_list <- list()
+
+  # extract all sig events in the library
+  dummy <- lapply(names(kd_library), function(experiment){
+    sig_events <- unlist(extract_GSEA_significant_events(kd_library[[experiment]]))
+    event_list[[length(event_list) + 1]] <<- sig_events
+    return()
+  })
+
+  # generate list and weight for them
+  null_event <- unique(unlist(event_list))
+  null_weight <- table(unlist(event_list))
+
+  # define uninformative events
+  uninformative_events <- names(null_weight)[null_weight > overlap_threshold]
+
+  study_mats_clean <- study_mats[, c("event", "pulled_delta_psi")]
+  study_rank <- study_mats_clean$pulled_delta_psi
+  names(study_rank) <- study_mats_clean$event
+
+  # calculate correlation for signature
+  test_result_df <- do.call(rbind, pbmcapply::pbmclapply(names(kd_library_spltype), function(signature){
+
+    print(signature)
+    # filter out by count
+    test_mats <- kd_library_spltype[[signature]]
+
+    result_df <- calculate_RBP_KD_correlation_from_mats(test_mats, study_mats, signature, study, num_permutation = 100, beta_threshold = 0.1)
+
+    # calculate concordance
+    concord_result_df <- calculate_RBP_KD_concordance_from_mats(test_mats, study_mats, signature, study)
+
+    # merge concordance result with linear model result
+    result_df$concordance <- concord_result_df$score
+    result_df$concordance_abs <- concord_result_df$score_abs
+
+    # print("AAAA")
+    # run GSEA analysis
+    # divide pos events and neg events for GSEA query
+    interest_event_lib_full <- SPARKS::extract_GSEA_significant_events(test_mats)
+    interest_event_lib_filtered <- SPARKS::extract_GSEA_significant_events(subset(test_mats, !(event %in% uninformative_events)))
+
+    print(signature)
+    print(length(interest_event_lib_filtered$positive))
+    print(length(interest_event_lib_filtered$negative))
+
+    # print(library_sig_interest)
+    gsea_result_full <- calculate_fgsea_score(interest_event_lib_full, study_rank)
+
+    # skip if library length is 0
+    if ((length(interest_event_lib_filtered$positive) >= 15) & (length(interest_event_lib_filtered$negative) >= 15)){
+      gsea_result_filtered <- calculate_fgsea_score(interest_event_lib_filtered, study_rank)
+      print(signature)
+      print(gsea_result_filtered)
+      # calculate rank
+      gsea_pos_score <- gsea_result_filtered$pos_score
+      gsea_neg_score <- gsea_result_filtered$neg_score
+      gsea_score <- gsea_result_filtered$score
+      gsea_score_abs <- abs(gsea_result_filtered$score)
+      gsea_combined_pval <- gsea_result_filtered$pval
+    } else {
+      # calculate rank
+      gsea_pos_score <- 0
+      gsea_neg_score <- 0
+      gsea_score <- 0
+      gsea_score_abs <- 0
+      gsea_combined_pval <- 1
+    }
+
+
+    ### PERFORM permutation
+    # get size
+    size_pos <- length(interest_event_lib_filtered$positive)
+    size_neg <- length(interest_event_lib_filtered$negative)
+
+    pval_list <- lapply(seq(n_test), function(idx){
+
+      # generate size matching null
+      pos_null_events <- sample(names(study_rank), size_pos)
+      neg_null_events <- sample(names(study_rank), size_neg)
+
+      library_null <- list()
+      library_null$positive <- pos_null_events
+      library_null$negative <- neg_null_events
+
+      # run gsea
+      gsea_result_null <- calculate_fgsea_score(library_null, study_rank)
+
+      combined_pval <- gsea_result_null$pval
+
+      return(combined_pval)
+    })
+
+    perm_pval <- min(unlist(pval_list))
+
+
+
+
+    # calculate rank
+    result_df$gsea_pos_score <- gsea_pos_score
+    result_df$gsea_neg_score <- gsea_neg_score
+    result_df$gsea_score <- gsea_score
+    result_df$gsea_score_abs <- gsea_score_abs
+    result_df$gsea_combined_pval <- gsea_combined_pval
+
+    # add tangential full information
+    # calculate rank
+    result_df$gsea_pos_score_full <- gsea_result_full$pos_score
+    result_df$gsea_neg_score_full <- gsea_result_full$neg_score
+    result_df$gsea_score_full <- gsea_result_full$score
+    result_df$gsea_score_abs_full <- abs(gsea_result_full$score)
+    result_df$gsea_combined_pval_full <- gsea_result_full$pval
+
+    # add perm pval
+    result_df$perm_pval <- perm_pval
+    # print(result_df)
+
+    return(result_df)
+  }, mc.cores = num_cores))
+
+  ### calculate RANK for downstream analysis
+  if (method == "GSEA"){
+    test_result_df$rank <- rank(-test_result_df$gsea_score_abs)
+    test_result_df$plot_score <- test_result_df$gsea_score_abs
+  } else if (method == "Pearson"){
+    test_result_df$rank <- rank(-test_result_df$score_abs)
+    test_result_df$plot_score <- test_result_df$score_abs
+  } else if (method == "Kendall"){
+    test_result_df$rank <- rank(-test_result_df$concordance_abs)
+    test_result_df$plot_score <- test_result_df$concordance_abs
+  }
+
+  return(test_result_df)
 }
