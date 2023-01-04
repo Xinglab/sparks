@@ -896,7 +896,7 @@ perform_SPARKS_analysis_competitive_gsea <- function(study_mats,
 
     print(signature)
     # filter out by count
-    test_mats <- kd_library_spltype[[signature]]
+    test_mats <- kd_library[[signature]]
 
     result_df <- calculate_RBP_KD_correlation_from_mats(test_mats, study_mats, signature, study, num_permutation = 100, beta_threshold = 0.1)
 
