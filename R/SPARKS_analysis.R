@@ -864,11 +864,12 @@ calculate_fgsea_score <- function(gsea_library, study_rank){
 
 #' @export
 perform_SPARKS_analysis_competitive_gsea <- function(study_mats,
-                                                     kd_library, study,
+                                                     kd_library,
+                                                     study,
                                                      method = "GSEA",
                                                      num_cores = 3,
                                                      overlap_threshold = 50){
-  n_test < 100
+  n_test <- 100
   # query null events
   event_list <- list()
 
