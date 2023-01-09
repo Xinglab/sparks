@@ -863,12 +863,12 @@ calculate_fgsea_score <- function(gsea_library, study_rank){
 
 
 #' @export
-perform_SPARKS_analysis_competitive_gsea <- function(study_mats,
+perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
                                                      kd_library,
                                                      study,
                                                      method = "GSEA",
                                                      num_cores = 3,
-                                                     overlap_threshold = 50){
+                                                     overlap_ratio_threshold = 0.20){
   n_test <- 100
   # query null events
   event_list <- list()
@@ -885,7 +885,7 @@ perform_SPARKS_analysis_competitive_gsea <- function(study_mats,
   null_weight <- table(unlist(event_list))
 
   # define uninformative events
-  uninformative_events <- names(null_weight)[null_weight > overlap_threshold]
+  uninformative_events <- names(null_weight)[null_weight > length(kd_library) * overlap_ratio_threshold]
 
   study_mats_clean <- study_mats[, c("event", "pulled_delta_psi")]
   study_rank <- study_mats_clean$pulled_delta_psi
@@ -942,29 +942,32 @@ perform_SPARKS_analysis_competitive_gsea <- function(study_mats,
 
 
     ### PERFORM permutation
-    # get size
-    size_pos <- length(interest_event_lib_filtered$positive)
-    size_neg <- length(interest_event_lib_filtered$negative)
-
-    pval_list <- lapply(seq(n_test), function(idx){
-
-      # generate size matching null
-      pos_null_events <- sample(names(study_rank), size_pos)
-      neg_null_events <- sample(names(study_rank), size_neg)
-
-      library_null <- list()
-      library_null$positive <- pos_null_events
-      library_null$negative <- neg_null_events
-
-      # run gsea
-      gsea_result_null <- calculate_fgsea_score(library_null, study_rank)
-
-      combined_pval <- gsea_result_null$pval
-
-      return(combined_pval)
-    })
-
-    perm_pval <- min(unlist(pval_list))
+    ## Permutation is disabled because it doesn't really add much value
+    ## compared to traditional BH FDR correction
+    ## but it takes a lot of computational resources
+    # # get size
+    # size_pos <- length(interest_event_lib_filtered$positive)
+    # size_neg <- length(interest_event_lib_filtered$negative)
+    #
+    # pval_list <- lapply(seq(n_test), function(idx){
+    #
+    #   # generate size matching null
+    #   pos_null_events <- sample(names(study_rank), size_pos)
+    #   neg_null_events <- sample(names(study_rank), size_neg)
+    #
+    #   library_null <- list()
+    #   library_null$positive <- pos_null_events
+    #   library_null$negative <- neg_null_events
+    #
+    #   # run gsea
+    #   gsea_result_null <- calculate_fgsea_score(library_null, study_rank)
+    #
+    #   combined_pval <- gsea_result_null$pval
+    #
+    #   return(combined_pval)
+    # })
+    #
+    # perm_pval <- min(unlist(pval_list))
 
 
 
@@ -985,7 +988,7 @@ perform_SPARKS_analysis_competitive_gsea <- function(study_mats,
     result_df$gsea_combined_pval_full <- gsea_result_full$pval
 
     # add perm pval
-    result_df$perm_pval <- perm_pval
+    # result_df$perm_pval <- perm_pval
     # print(result_df)
 
     return(result_df)

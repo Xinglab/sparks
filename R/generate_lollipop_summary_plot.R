@@ -476,6 +476,9 @@ generate_strip_lollipop_plot_vertical <- function(test_result_list,
                                                   rbp_of_interest,
                                                   spl_type,
                                                   max_score_threshold = 0.8,
+                                                  sig_test = FALSE,
+                                                  significance_threshod = 0.01,
+                                                  sig_test_method = "BH",
                                                   color_offset = 0,
                                                   score_legend = FALSE,
                                                   color = "Set1",
@@ -585,8 +588,16 @@ generate_strip_lollipop_plot_vertical <- function(test_result_list,
     scale_fill_distiller(palette = "PiYG",  # manually set fill for enrichment score
                          limits = c(-max_score_threshold, max_score_threshold),
                          na.value = "black",
-                         breaks = c(0.8, 0.4, 0, -0.4, -0.8),
-                         labels = c(">0.8", 0.4, 0, -0.4, "<-0.8"),
+                         breaks = c(max_score_threshold,
+                                    max_score_threshold / 2,
+                                    0,
+                                    -max_score_threshold / 2,
+                                    -max_score_threshold),
+                         labels = c(sprintf(">%s", max_score_threshold),
+                                    max_score_threshold / 2,
+                                    0,
+                                    -max_score_threshold / 2,
+                                    sprintf("<-%s", max_score_threshold)),
                          values = c(0, 0.25, 0.5, 0.75, 1),
                          guide = "none") +
     labs(fill = "Enrichment Score",
@@ -635,36 +646,118 @@ generate_strip_lollipop_plot_vertical <- function(test_result_list,
                                       fill = NA,
                                       size = 1))
 
-  if (!score_legend){  # remove legend for stacked plots
-    p_strip <- p_strip + theme(legend.position = "none")
-    # combine the plots for final
-    p_combined <-
-      cowplot::plot_grid(p_strip,
-                         p_lollipop +  # remove axis and legends because it will be annotated in the strip plot
-                           theme(legend.position = "none") +
-                           theme(axis.text = element_blank(),
-                                 axis.ticks = element_blank(),
-                                 axis.title = element_blank()),
+  # if significance testing was performed
+  if (sig_test){
+    # Add significance part
+    test_result_df$padj <- p.adjust(test_result_df$gsea_combined_pval,
+                                    method = sig_test_method)
 
-                         nrow = 1,
-                         align = "h",
-                         axis = "tb",
-                         rel_widths = c(1, 2.5))  #note the ratio is a bit different
-  } else {  # remove legend for stacked plots
-    # combine the plots for final
-    p_combined <-
-      cowplot::plot_grid(p_lollipop +  # remove axis and legends because it will be annotated in the strip plot
-                           theme(legend.position = "none") +
-                           theme(axis.text.x = element_blank(),
-                                 axis.ticks.x = element_blank(),
-                                 axis.title = element_blank()),
-                         p_strip,
-                         ncol = 1,
-                         align = "v",
-                         axis = "lr",
-                         rel_heights = c(2, 1))
+    test_result_df$sig <- ifelse(test_result_df$padj < significance_threshod,
+                                 "Significant",
+                                 "Not Significant")
+    # calculate number of significant events for plot annotation
+    num_sig <- sum(test_result_df$sig == "Significant")
+
+    # generate strip plot for significance
+    p_sig <-
+      ggplot(test_result_df,
+             aes(x = "Signif",
+                 y = plot_rank)) +
+      geom_tile(aes(fill = sig),
+                width = 1.1) +  # this width may be necessary to remove weird white lines
+      scale_y_reverse(limits = rev(c(0, max(test_result_df$plot_rank))),  # manually set x axis scales to match the strip plot
+                      expand = expansion(add = c(10, 10)),
+                      breaks = c(1, # breaks at the begining
+                                 seq(floor(max(test_result_df$plot_rank) / strip_break_interval)) * strip_break_interval,  # breaks at every 150 experiments
+                                 max(test_result_df$plot_rank))) +  # breaks at the end
+      scale_x_discrete(expand = c(0, 0)) +
+      scale_fill_manual(values = c("Significant" = "indianred3",
+                                   "Not Significant" = "grey80")) +
+      labs(fill = sprintf("Significance (FDR < %s)", significance_threshod),
+           y = sprintf("Significant Experiments - %s Sig Exps", num_sig)) +
+      theme(legend.position = "right",
+            legend.text = element_text(size = 8),  # change legend text size
+            legend.title = element_text(size = 10)) +
+      theme(axis.title.x = element_blank(), # change axis title stuffs
+            axis.title.y = element_text(size = 10)) +
+      theme(panel.background = element_blank(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.border = element_rect(color = "black",
+                                        fill = NA,
+                                        size = 1))
+
+    if (!score_legend){  # remove legend for stacked plots
+      # combine the plots for final
+      p_combined <-
+        cowplot::plot_grid(p_strip + theme(legend.position = "none"),  # remove legend for stacked plots
+                           p_sig + theme(legend.position = "none"),
+                           p_lollipop +  # remove axis and legends because it will be annotated in the strip plot
+                             theme(legend.position = "none") +
+                             theme(axis.text = element_blank(),
+                                   axis.ticks = element_blank(),
+                                   axis.title = element_blank()),
+
+                           nrow = 1,
+                           align = "h",
+                           axis = "tb",
+                           rel_widths = c(1, 1, 2.5))  #note the ratio is a bit different
+    } else {  # remove legend for stacked plots
+      # combine the plots for final
+      p_combined_plot_area <-
+        cowplot::plot_grid(p_strip + theme(legend.position = "none"),  # remove legend for stacked plots
+                           p_sig + theme(legend.position = "none"),
+                           p_lollipop +  # remove axis and legends because it will be annotated in the strip plot
+                             theme(legend.position = "none") +
+                             theme(axis.text = element_blank(),
+                                   axis.ticks = element_blank(),
+                                   axis.title = element_blank()),
+                           nrow = 1,
+                           align = "h",
+                           axis = "tb",
+                           rel_widths = c(1, 1, 2.5))  #note the ratio is a bit different
+      # combine legend
+      p_combined_legend <-
+        cowplot::plot_grid(cowplot::get_legend(p_strip),
+                           cowplot::get_legend(p_sig),
+                           ncol = 1)
+      p_combined <-
+        cowplot::plot_grid(p_combined_plot_area,
+                           p_combined_legend,
+                           nrow = 1,
+                           rel_widths = c(2.5, 1))
+    }
+  } else {
+    if (!score_legend){  # remove legend for stacked plots
+      p_strip <- p_strip + theme(legend.position = "none")
+      # combine the plots for final
+      p_combined <-
+        cowplot::plot_grid(p_strip,
+                           p_lollipop +  # remove axis and legends because it will be annotated in the strip plot
+                             theme(legend.position = "none") +
+                             theme(axis.text = element_blank(),
+                                   axis.ticks = element_blank(),
+                                   axis.title = element_blank()),
+
+                           nrow = 1,
+                           align = "h",
+                           axis = "tb",
+                           rel_widths = c(1, 2.5))  #note the ratio is a bit different
+    } else {  # remove legend for stacked plots
+      # combine the plots for final
+      p_combined <-
+        cowplot::plot_grid(p_lollipop +  # remove axis and legends because it will be annotated in the strip plot
+                             theme(legend.position = "none") +
+                             theme(axis.text.x = element_blank(),
+                                   axis.ticks.x = element_blank(),
+                                   axis.title = element_blank()),
+                           p_strip,
+                           ncol = 1,
+                           align = "v",
+                           axis = "lr",
+                           rel_heights = c(2, 1))
+    }
   }
-
 
 
   return(p_combined)
