@@ -869,12 +869,12 @@ calculate_fgsea_score <- function(gsea_library, study_rank){
 
 #' @export
 perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
-                                                     kd_library,
-                                                     study,
-                                                     method = "GSEA",
-                                                     num_cores = 3,
-                                                     overlap_ratio_threshold = 0.20){
-  n_test <- 100
+                                                        kd_library,
+                                                        study,
+                                                        method = "GSEA",
+                                                        num_cores = 3,
+                                                        overlap_ratio_threshold = 0.20,
+                                                        library_list = c()){
   # query null events
   event_list <- list()
 
@@ -895,6 +895,11 @@ perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
   study_mats_clean <- study_mats[, c("event", "pulled_delta_psi")]
   study_rank <- study_mats_clean$pulled_delta_psi
   names(study_rank) <- study_mats_clean$event
+
+  # limit the scope of kd library if given
+  if(length(library_list) > 0){
+    kd_library <- kd_library[library_list]
+  }
 
   # calculate correlation for signature
   test_result_df <- do.call(rbind, pbmcapply::pbmclapply(names(kd_library), function(signature){
