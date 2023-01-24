@@ -846,12 +846,12 @@ calculate_fgsea_score <- function(gsea_library, study_rank){
 
   if(is.na(neg_pval) | is.na(pos_pval)){
     combined_pval <- 1
-  } else if (sign(pos_score) == sign(neg_score)){  # if the sign is the same, p-value should be 1
-    # this is based on CMAP paper (Lamb et al., Science 2006)
-    # the CMAP paper makes the score 0, but for our analysis
-    # we only make the p-value 1
-    combined_pval <- 1
-  } else{
+  # } else if (sign(pos_score) == sign(neg_score)){  # if the sign is the same, p-value should be 1
+  #   # this is based on CMAP paper (Lamb et al., Science 2006)
+  #   # the CMAP paper makes the score 0, but for our analysis
+  #   # we only make the p-value 1
+  #   combined_pval <- 1
+  } else {
     fisher_result <- metap::sumlog(c(neg_pval, pos_pval))
     combined_pval <- fisher_result$p
   }
