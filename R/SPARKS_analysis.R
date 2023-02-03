@@ -907,21 +907,29 @@ perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
     print(signature)
     # filter out by count
     test_mats <- kd_library[[signature]]
+    test_mats_filtered <- subset(test_mats, !(event %in% uninformative_events))
 
-    result_df <- calculate_RBP_KD_correlation_from_mats(test_mats, study_mats, signature, study, num_permutation = 100, beta_threshold = 0.1)
+    result_df <- calculate_RBP_KD_correlation_from_mats(test_mats_filtered,  # apply this filter to here too
+                                                        study_mats,
+                                                        signature,
+                                                        study)
 
     # calculate concordance
-    concord_result_df <- calculate_RBP_KD_concordance_from_mats(test_mats, study_mats, signature, study)
+    concord_result_df <- calculate_RBP_KD_concordance_from_mats(test_mats_filtered,
+                                                                study_mats,
+                                                                signature,
+                                                                study)
 
     # merge concordance result with linear model result
     result_df$concordance <- concord_result_df$score
     result_df$concordance_abs <- concord_result_df$score_abs
+    result_df$concordance_pval <- concord_result_df$pval
 
     # print("AAAA")
     # run GSEA analysis
     # divide pos events and neg events for GSEA query
     interest_event_lib_full <- SPARKS::extract_GSEA_significant_events(test_mats)
-    interest_event_lib_filtered <- SPARKS::extract_GSEA_significant_events(subset(test_mats, !(event %in% uninformative_events)))
+    interest_event_lib_filtered <- SPARKS::extract_GSEA_significant_events(test_mats_filtered)
 
     print(signature)
     print(length(interest_event_lib_filtered$positive))

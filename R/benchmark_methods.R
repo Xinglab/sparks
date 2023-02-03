@@ -488,6 +488,12 @@ calculate_RBP_KD_concordance_from_mats <- function(kd_mats_df,
   score <- num_eff / num_total
   score_abs <- abs(score)
 
+  # calculate p-value
+  sign_df <- ifelse(abs(delta_psi_df) < beta_threshold,
+                    0, ifelse(delta_psi_df > 0, 1, -1))
+  p_value <- cor.test(sign_df[, 1], sign_df[, 2], method = "kendall")$p.value
+
+
   result_df <- data.frame(S1 = study_1,
                           S2 = study_2,
                           num_common_events = num_complete,
@@ -504,11 +510,9 @@ calculate_RBP_KD_concordance_from_mats <- function(kd_mats_df,
                           num_eff = num_eff,
                           num_total_sig = num_total,
                           score = score,
-                          score_abs = score_abs)
-  # sig events in each RBP
-  # sig events common
-  # corr
-  # corr stat
+                          score_abs = score_abs,
+                          pval = p_value)
+
   return(result_df)
 }
 
