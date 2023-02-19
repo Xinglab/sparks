@@ -946,6 +946,9 @@ perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
       # calculate rank
       gsea_pos_score <- gsea_result_filtered$pos_score
       gsea_neg_score <- gsea_result_filtered$neg_score
+      gsea_pos_pval <- gsea_result_filtered$pos_pval
+      gsea_neg_pval <- gsea_result_filtered$neg_pval
+
       gsea_score <- gsea_result_filtered$score
       gsea_score_abs <- abs(gsea_result_filtered$score)
       gsea_combined_pval <- gsea_result_filtered$pval
@@ -953,6 +956,8 @@ perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
       # calculate rank
       gsea_pos_score <- 0
       gsea_neg_score <- 0
+      gsea_pos_pval <- 1
+      gsea_neg_pval <- 1
       gsea_score <- 0
       gsea_score_abs <- 0
       gsea_combined_pval <- 1
@@ -993,6 +998,8 @@ perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
     # calculate rank
     result_df$gsea_pos_score <- gsea_pos_score
     result_df$gsea_neg_score <- gsea_neg_score
+    result_df$gsea_pos_pval <- gsea_pos_pval
+    result_df$gsea_neg_pval <- gsea_neg_pval
     result_df$gsea_score <- gsea_score
     result_df$gsea_score_abs <- gsea_score_abs
     result_df$gsea_combined_pval <- gsea_combined_pval
