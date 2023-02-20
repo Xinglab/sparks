@@ -843,9 +843,14 @@ calculate_fgsea_score <- function(gsea_library, study_rank){
   # print(neg_pval)
   # print(gsea_result)
 
+  if (is.na(neg_pval)){  # if we don't get the enrichment score for some reason..
+    combined_pval <- metap::sumlog(c(pos_pval, 1))
 
-  if(is.na(neg_pval) | is.na(pos_pval)){
-    combined_pval <- 1
+  } else if (is.na(pos_pval)){
+    combined_pval <- metap::sumlog(c(neg_pval, 1))
+
+  # if(is.na(neg_pval) | is.na(pos_pval)){
+  #   combined_pval <- 1
   # } else if (sign(pos_score) == sign(neg_score)){  # if the sign is the same, p-value should be 1
   #   # this is based on CMAP paper (Lamb et al., Science 2006)
   #   # the CMAP paper makes the score 0, but for our analysis
