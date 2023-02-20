@@ -844,10 +844,10 @@ calculate_fgsea_score <- function(gsea_library, study_rank){
   # print(gsea_result)
 
   if (is.na(neg_pval)){  # if we don't get the enrichment score for some reason..
-    combined_pval <- metap::sumlog(c(pos_pval, 1))
+    combined_pval <- metap::sumlog(c(pos_pval, 1))$p
 
   } else if (is.na(pos_pval)){
-    combined_pval <- metap::sumlog(c(neg_pval, 1))
+    combined_pval <- metap::sumlog(c(neg_pval, 1))$p
 
   # if(is.na(neg_pval) | is.na(pos_pval)){
   #   combined_pval <- 1
