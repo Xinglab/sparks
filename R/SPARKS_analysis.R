@@ -225,7 +225,12 @@ import_SPARKS_MATS_for_analysis <- function(input_start, spl_type, count_thresho
   study_mats_raw <- input_start@MATS_list[[spl_type]]
 
   study_mats_known <- study_mats_raw[study_mats_raw$event %in% known_events, ]
-  study_mats_temp <- subset(study_mats_known, avg_count >= count_threshold)
+
+  # calculate minimum_count
+  study_mats_known$min_count <- unlist(lapply(study_mats_known$count_values,
+                                              function(input_counts) min(do.call(as.numeric, strsplit(input_counts, ",")))))
+
+  study_mats_temp <- subset(study_mats_known, avg_count >= count_threshold & min_count >= count_threshold) %>% arrange(-beta)
   return(study_mats_temp)
 }
 
