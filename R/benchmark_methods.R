@@ -77,6 +77,7 @@ calculate_RBP_KD_correlation_from_mats <- function(kd_mats_df,
 
   # calculate score
   score <- rsq * num_eff / num_total
+  if(is.na(score)){ score <- 0}  # fill 0 if score is NaN, which is possible by 0 div
   score_abs <- abs(score)
 
 
@@ -486,14 +487,19 @@ calculate_RBP_KD_concordance_from_mats <- function(kd_mats_df,
 
   # calculate score
   score <- num_eff / num_total
+  if(is.na(score)) {score <- 0}
   score_abs <- abs(score)
 
   # calculate p-value
   sign_df <- ifelse(abs(delta_psi_df) < beta_threshold,
                     0, ifelse(delta_psi_df > 0, 1, -1))
-  p_value <- cor.test(sign_df[, 1], sign_df[, 2], method = "kendall")$p.value
 
-
+  tryCatch({
+    p_value <- cor.test(sign_df[, 1], sign_df[, 2], method = "kendall")$p.value
+  },
+  error = function(e){
+    p_value <<- 1
+  })
   result_df <- data.frame(S1 = study_1,
                           S2 = study_2,
                           num_common_events = num_complete,

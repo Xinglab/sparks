@@ -1076,3 +1076,97 @@ rewrite_event_coordinates <- function(x){  # clean coordinates
   }
   return(new_event)
 }
+
+
+#' @export
+import_SPARKS_MATS_for_rerun <- function(input_spark, spl_type = "SE"){
+  # import study mats
+  study_mats <- import_SPARKS_MATS_for_analysis(input_spark, spl_type)
+
+  # clean the coordinates
+  study_mats$event <- unlist(lapply(study_mats$event,
+                                    function(x) rewrite_event_coordinates(x)))
+
+  # sort study mats to use as profile
+  # study_mats_sorted <- study_mats[order(-study_mats$beta), ]
+  study_mats_sorted <- study_mats %>% arrange(-beta)
+
+  return(study_mats_sorted)
+}
+
+
+#' @export
+generate_subset_SPARKS_rerun <- function(input_sparks,
+                                         kd_library_all,
+                                         subset_study,
+                                         sample_one_id,
+                                         sample_two_id,
+                                         num_cores = 3,
+                                         num_MC = 300,
+                                         overlap_ratio_threshold = 0.20){
+  # make copy
+  subset_sparks <- input_sparks
+
+  # identify the index for the sample for the subset
+  sample_idx_one <- sample_one_id
+  sample_idx_two <- sample_two_id
+
+  spl_types <- c("SE", "A3SS", "A5SS")
+  # subset the PSI values
+  dummy <- lapply(spl_types, function(spl_type){
+    print(sprintf("Subsetting PSI df for %s", spl_type))
+    full_psi_df <- input_sparks@psi_df[[spl_type]]
+    subset_psi_df <- full_psi_df[, c(sample_idx_one, sample_idx_two)]
+    # append the result for downstream analysis
+    subset_sparks@psi_df[[spl_type]] <<- subset_psi_df
+    return()
+  })
+
+  # subset the MATS
+  dummy <- lapply(spl_types, function(spl_type){
+    print(sprintf("Subsetting MATS df for %s", spl_type))
+    print("XXX")
+    # TODO - this has been checkd only for SE - generalize
+    full_mats_df <- import_SPARKS_MATS_for_rerun(input_sparks, spl_type)
+    subset_mats_df <- calculate_new_psi_for_subset_of_samples(full_mats_df,
+                                                              sample_idx_one,
+                                                              sample_idx_two)
+    subset_mats_filtered <- subset_mats_df[rowSums(is.na(subset_mats_df)) == 0, ] %>% arrange(-beta)
+    print(head(subset_mats_filtered))
+    # subset_mats_filtered <- subset_mats_filtered[rev(order(subset_mats_filtered$beta)), ]
+    # append the result for downstream analysis
+    subset_sparks@MATS_list[[spl_type]] <<- subset_mats_filtered
+  })
+
+  print("Performing SPARKS Analysis for the subset")
+
+  # update SPARKS analysis result - TODO - generalize?
+  # subset_sparks_result <- perform_SPARKS_analysis_for_all_splice_types(subset_sparks,
+  #                                                                      kd_library_all,
+  #                                                                      subset_study)
+  # subset_sparks@SPARKS_analysis_result <- subset_sparks_result
+
+  subset_sparks_result_SE <- perform_SPARKS_analysis_with_overlap_filter(subset_sparks@MATS_list$SE,
+                                                                         kd_library_all,
+                                                                         study = subset_study,
+                                                                         num_cores = num_cores,
+                                                                         overlap_ratio_threshold = overlap_ratio_threshold)
+  subset_sparks@SPARKS_analysis_result$SE <- subset_sparks_result_SE
+
+  # print("Subsetting Expression df for the subset")
+  # # subset the expression values
+  # # calculate new index, as this may be different since it was randomized in python process
+  # full_exp_df <- input_sparks@exp_df
+  # exp_sample_idx_one <- which(startsWith(colnames(full_exp_df), sample_one_id))
+  # exp_sample_idx_two <- which(startsWith(colnames(full_exp_df), sample_two_id))
+
+  # subset_exp_df <- full_exp_df[, c(exp_sample_idx_one, exp_sample_idx_two)]
+  # # append the result for downstream analysis
+  # subset_sparks@exp_df <- subset_exp_df
+
+  # update study
+  subset_sparks@study <- subset_study
+
+  return(subset_sparks)
+}
+
