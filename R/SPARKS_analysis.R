@@ -1088,9 +1088,13 @@ import_SPARKS_MATS_for_rerun <- function(input_spark, spl_type = "SE"){
   # import study mats
   study_mats <- import_SPARKS_MATS_for_analysis(input_spark, spl_type)
 
-  # clean the coordinates
-  study_mats$event <- unlist(lapply(study_mats$event,
-                                    function(x) rewrite_event_coordinates(x)))
+
+  # check if the event name is already processed
+  if(length(strsplit(study_mats[1, 'event'], ":")[[1]]) != 8){  # if not processed
+    # clean the coordinates
+    study_mats$event <- unlist(lapply(study_mats$event,
+                                      function(x) rewrite_event_coordinates(x)))
+  }
 
   # sort study mats to use as profile
   # study_mats_sorted <- study_mats[order(-study_mats$beta), ]
