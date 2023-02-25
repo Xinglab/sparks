@@ -235,6 +235,8 @@ import_SPARKS_MATS_for_analysis <- function(input_start, spl_type, count_thresho
     study_mats_known <- input_start@MATS_list[[spl_type]]
   }
 
+  study_mats_known$beta <- study_mats_known$pulled_delta_psi
+
   # calculate minimum_count
   study_mats_known$min_count <- unlist(lapply(study_mats_known$count_values,
                                               function(input_counts) min(do.call(as.numeric, strsplit(input_counts, ",")))))
@@ -243,6 +245,7 @@ import_SPARKS_MATS_for_analysis <- function(input_start, spl_type, count_thresho
   study_mats_temp <- subset(study_mats_known,
                             avg_count >= count_threshold &
                               min_count >= count_threshold) %>% arrange(-beta)
+
   return(study_mats_temp)
 }
 
@@ -283,9 +286,6 @@ perform_SPARKS_analysis_for_all_splice_types <- function(input_start, kd_library
     }
 
     test_result_df <- perform_SPARKS_analysis_with_overlap_filter(study_mats, kd_library_all[[spl_type]], test_study, score_method)
-
-    # store data
-    test_result_df$spl_type <- spl_type
 
     return(test_result_df)
   })
@@ -901,7 +901,7 @@ perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
                                                         study,
                                                         method = "GSEA",
                                                         num_cores = 3,
-                                                        overlap_ratio_threshold = 0.20,
+                                                        overlap_ratio_threshold = 0.30,
                                                         library_list = c()){
   # query null events
   event_list <- list()
@@ -928,9 +928,8 @@ perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
   if(length(library_list) > 0){
     kd_library <- kd_library[library_list]
   }
-
   # calculate correlation for signature
-  test_result_df <- do.call(rbind, pbmcapply::pbmclapply(names(kd_library), function(signature){
+  test_result_df_list <- pbmcapply::pbmclapply(names(kd_library), function(signature){
 
     print(signature)
     # filter out by count
@@ -941,6 +940,7 @@ perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
                                                         study_mats,
                                                         signature,
                                                         study)
+
 
     # calculate concordance
     concord_result_df <- calculate_RBP_KD_concordance_from_mats(test_mats_filtered,
@@ -953,7 +953,7 @@ perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
     result_df$concordance_abs <- concord_result_df$score_abs
     result_df$concordance_pval <- concord_result_df$pval
 
-    # print("AAAA")
+
     # run GSEA analysis
     # divide pos events and neg events for GSEA query
     interest_event_lib_full <- SPARKS::extract_GSEA_significant_events(test_mats)
@@ -991,38 +991,6 @@ perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
       gsea_combined_pval <- 1
     }
 
-
-    ### PERFORM permutation
-    ## Permutation is disabled because it doesn't really add much value
-    ## compared to traditional BH FDR correction
-    ## but it takes a lot of computational resources
-    # # get size
-    # size_pos <- length(interest_event_lib_filtered$positive)
-    # size_neg <- length(interest_event_lib_filtered$negative)
-    #
-    # pval_list <- lapply(seq(n_test), function(idx){
-    #
-    #   # generate size matching null
-    #   pos_null_events <- sample(names(study_rank), size_pos)
-    #   neg_null_events <- sample(names(study_rank), size_neg)
-    #
-    #   library_null <- list()
-    #   library_null$positive <- pos_null_events
-    #   library_null$negative <- neg_null_events
-    #
-    #   # run gsea
-    #   gsea_result_null <- calculate_fgsea_score(library_null, study_rank)
-    #
-    #   combined_pval <- gsea_result_null$pval
-    #
-    #   return(combined_pval)
-    # })
-    #
-    # perm_pval <- min(unlist(pval_list))
-
-
-
-
     # calculate rank
     result_df$gsea_pos_score <- gsea_pos_score
     result_df$gsea_neg_score <- gsea_neg_score
@@ -1040,12 +1008,15 @@ perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
     result_df$gsea_score_abs_full <- abs(gsea_result_full$score)
     result_df$gsea_combined_pval_full <- gsea_result_full$pval
 
-    # add perm pval
-    # result_df$perm_pval <- perm_pval
-    # print(result_df)
-
     return(result_df)
-  }, mc.cores = num_cores))
+  }, mc.cores = num_cores)
+
+  # if running single-entry item, it gets weird, so handling it in two diff case
+  if (length(test_result_df_list$value) > 1){
+    test_result_df <- do.call(rbind, test_result_df_list$value)
+  } else {
+    test_result_df <- test_result_df_list$value[[1]]
+  }
 
   ### calculate RANK for downstream analysis
   if (method == "GSEA"){
@@ -1059,6 +1030,8 @@ perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
     test_result_df$plot_score <- test_result_df$concordance_abs
   }
 
+  # add the frequency cutoff to reduce confusion downstream
+  test_result_df$frequency_cutoff <- overlap_ratio_threshold
   return(test_result_df)
 }
 
@@ -1191,3 +1164,16 @@ generate_subset_SPARKS_rerun <- function(input_sparks,
   return(subset_sparks)
 }
 
+
+#' @export
+calculate_SPARKS_padj <- function(sparks_result, sig_test_method = "bonferroni", same_sign_ES_threshold = 0.5){
+  # calculate raw padj
+  sparks_result$padj <- p.adjust(sparks_result$gsea_combined_pval,
+                                 method = sig_test_method)
+
+  # flatten if the sign is the same but the score is below the threhsold
+  sparks_result[(sign(sparks_result$gsea_pos_score) == sign(sparks_result$gsea_neg_score)) &
+                  (sparks_result$gsea_score_abs < same_sign_ES_threshold), ]$padj <- 1
+
+  return(sparks_result)
+}
