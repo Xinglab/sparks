@@ -227,6 +227,10 @@ import_SPARKS_MATS_for_analysis <- function(input_start, spl_type, count_thresho
     study_mats_raw <- input_start@MATS_list[[spl_type]]
 
     study_mats_known <- study_mats_raw[study_mats_raw$event %in% known_events, ]
+
+    # update the event to short form
+    study_mats_known$event <- unlist(lapply(study_mats_known$event,
+                                            function(x) rewrite_event_coordinates(x)))
   } else {  # means the MATS is already processed, so no need to anything
     study_mats_known <- input_start@MATS_list[[spl_type]]
   }
@@ -235,7 +239,10 @@ import_SPARKS_MATS_for_analysis <- function(input_start, spl_type, count_thresho
   study_mats_known$min_count <- unlist(lapply(study_mats_known$count_values,
                                               function(input_counts) min(do.call(as.numeric, strsplit(input_counts, ",")))))
 
-  study_mats_temp <- subset(study_mats_known, avg_count >= count_threshold & min_count >= count_threshold) %>% arrange(-beta)
+  # filter by minimum count
+  study_mats_temp <- subset(study_mats_known,
+                            avg_count >= count_threshold &
+                              min_count >= count_threshold) %>% arrange(-beta)
   return(study_mats_temp)
 }
 
@@ -275,7 +282,7 @@ perform_SPARKS_analysis_for_all_splice_types <- function(input_start, kd_library
       study_mats <- calculate_new_psi_for_subset_of_samples(study_mats, subset_group_1, subset_group_2)
     }
 
-    test_result_df <- perform_SPARKS_analysis(study_mats, kd_library_all[[spl_type]], test_study, score_method)
+    test_result_df <- perform_SPARKS_analysis_with_overlap_filter(study_mats, kd_library_all[[spl_type]], test_study, score_method)
 
     # store data
     test_result_df$spl_type <- spl_type
@@ -418,7 +425,13 @@ calculate_new_psi_for_subset_of_samples <- function(study_mats, comp_sample_id_1
 
   study_mats_clean$pval <- study_mats_clean$pulled_pval
   study_mats_clean$fdr <- p.adjust(study_mats_clean$pval, method = "BH")
-  return(study_mats_clean)
+
+  # calculate minimum_count
+  study_mats_clean$min_count <- unlist(lapply(study_mats_clean$count_values,
+                                              function(input_counts) min(do.call(as.numeric, strsplit(input_counts, ",")))))
+
+  study_mats_temp <- subset(study_mats_clean, avg_count >= count_threshold & min_count >= count_threshold) %>% arrange(-beta)
+  return(study_mats_temp)
 }
 
 
@@ -1134,7 +1147,6 @@ generate_subset_SPARKS_rerun <- function(input_sparks,
   # subset the MATS
   dummy <- lapply(spl_types, function(spl_type){
     print(sprintf("Subsetting MATS df for %s", spl_type))
-    print("XXX")
     # TODO - this has been checkd only for SE - generalize
     full_mats_df <- import_SPARKS_MATS_for_rerun(input_sparks, spl_type)
     subset_mats_df <- calculate_new_psi_for_subset_of_samples(full_mats_df,

@@ -7,7 +7,7 @@ REPO_DIR = "~/xinglab/tools/SPARKS/"
 REF_FASTA = "~/xinglab/references/grch37/ucsc.hg19.fasta"
 KAL_INDEX_FILE = "/home/yangt3/xinglab/references/kallisto/homo_sapiens/transcriptome.idx"
 GENCODE_GTF = "/home/yangt3/aspera/GTEx/references/37.chr/gencode.v26lift37.annotation.gtf"
-SPARKS_LIB_FILE = "/home/yangt3/xinglab/ENCODE/SPARKS/ENCODE_library.KD_and_KO.count_20.rds"
+SPARKS_LIB_FILE = "/home/yangt3/xinglab/SPARKS/library/Clean_minfiltered.combined.library.rds"
 WD = os.path.dirname(os.path.realpath(__file__))
 
 # event type definition
