@@ -276,8 +276,9 @@ perform_SPARKS_analysis_for_all_splice_types <- function(input_start, kd_library
                                                          subset_group_1 = c(), subset_group_2 = c()){
 
   spl_types <- c("SE", "A3SS", "A5SS")
-
   test_result_list <- lapply(spl_types, function(spl_type) {
+    print(sprintf("Running SPARKS analysis on %s", spl_type))
+
     # filter raw data
     study_mats <- import_SPARKS_MATS_for_analysis(input_start, spl_type)
 
@@ -1012,9 +1013,13 @@ perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
   }, mc.cores = num_cores)
 
   # if running single-entry item, it gets weird, so handling it in two diff case
-  if (length(test_result_df_list$value) > 1){
+  # - this is a known bug in pbmcapply - issue #50
+  # - we are doing "catch" approach for possible user env variations
+  if (length(test_result_df_list$value) == 0) {  # this is the expected behavior
+    test_result_df <- do.call(rbind, test_result_df_list)
+  } else if (length(test_result_df_list$value) > 1) {  # this sometims happens because of warnings
     test_result_df <- do.call(rbind, test_result_df_list$value)
-  } else {
+  } else {  # if single? need to be tested
     test_result_df <- test_result_df_list$value[[1]]
   }
 
