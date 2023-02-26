@@ -1081,7 +1081,7 @@ import_SPARKS_MATS_for_rerun <- function(input_spark, spl_type = "SE"){
 
 
   # check if the event name is already processed
-  if(length(strsplit(study_mats[1, 'event'], ":")[[1]]) != 8){  # if not processed
+  if(length(strsplit(study_mats[1, 'event'], ":")[[1]]) == 11){  # if not processed
     # clean the coordinates
     study_mats$event <- unlist(lapply(study_mats$event,
                                       function(x) rewrite_event_coordinates(x)))
