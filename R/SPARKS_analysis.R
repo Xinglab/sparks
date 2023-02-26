@@ -221,7 +221,7 @@ calculate_GSEA_score_sampling_1d_weight <- function(input_signature_list, non_si
 #' @export
 import_SPARKS_MATS_for_analysis <- function(input_start, spl_type, count_threshold = 20){
   # check if the event name is already processed
-  if(length(strsplit(input_start@MATS_list[[spl_type]][1, 'event'], ":")[[1]]) != 8){  # if not processed
+  if(length(strsplit(input_start@MATS_list[[spl_type]][1, 'event'], ":")[[1]]) == 11){  # if not processed
     # process the data for analysis
     known_events <- rownames(subset(input_start@exon_annotation[[spl_type]], annotation == "Known_JC"))
     study_mats_raw <- input_start@MATS_list[[spl_type]]
