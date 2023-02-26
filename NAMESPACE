@@ -3,6 +3,7 @@
 export(GSEA.EnrichmentScore)
 export(SPARKS)
 export(add_custom_library_result_to_SPARKS_result)
+export(add_custom_library_to_SPARKS_test_result)
 export(add_custom_study_to_library)
 export(add_plot_title)
 export(append_SPARKS_expression)

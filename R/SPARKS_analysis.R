@@ -1182,3 +1182,42 @@ calculate_SPARKS_padj <- function(sparks_result, sig_test_method = "bonferroni",
 
   return(sparks_result)
 }
+
+
+#' @export
+add_custom_library_to_SPARKS_test_result <- function(input_mats,
+                                                     input_result,
+                                                     test_mats,
+                                                     test_study,
+                                                     kd_library){
+
+  # remove spl type if there is one just in case
+  if ("spl_type" %in% colnames(input_result)){
+    input_result$spl_type <- NULL
+  }
+
+  # remove GSEA rank if it is already there - as this will need to be recalculated
+  if ("gsea_rank" %in% colnames(input_result)){
+    input_result$gsea_rank <- NULL
+  }
+
+  # add the entry to library
+  added_library <- kd_library
+  added_library[[test_study]] <- test_mats
+
+
+
+  # run the new analysis only on the new entry
+  new_test_result <- perform_SPARKS_analysis_with_overlap_filter(input_mats,
+                                                                 added_library,
+                                                                 study = unique(input_result$S2)[1],  # this should be one entry
+                                                                 library_list = c(test_study),
+                                                                 num_cores = 1)
+  # combine the new result
+  combined_test_result <- rbind(input_result, new_test_result)
+
+  # calculate the rank again
+  combined_test_result$gsea_rank <- rank(-combined_test_result$gsea_score)
+
+  return(combined_test_result)
+}
