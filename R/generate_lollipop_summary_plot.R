@@ -629,8 +629,16 @@ generate_strip_lollipop_plot_vertical <- function(test_result_list,
     scale_fill_distiller(palette = "PiYG",  # manually set fill for enrichment score
                          limits = c(-max_score_threshold, max_score_threshold),
                          na.value = "black",
-                         breaks = c(0.8, 0.4, 0, -0.4, -0.8),
-                         labels = c(">0.8", 0.4, 0, -0.4, "<-0.8"),
+                         breaks = c(max_score_threshold,
+                                    max_score_threshold / 2,
+                                    0,
+                                    -max_score_threshold / 2,
+                                    -max_score_threshold),
+                         labels = c(sprintf(">%s", max_score_threshold),
+                                    max_score_threshold / 2,
+                                    0,
+                                    -max_score_threshold / 2,
+                                    sprintf("<-%s", max_score_threshold)),
                          values = c(0, 0.25, 0.5, 0.75, 1)) +
     labs(fill = "Enrichment\nScore",
          y = y_axis_title) +
@@ -674,7 +682,7 @@ generate_strip_lollipop_plot_vertical <- function(test_result_list,
       scale_fill_manual(values = c("Significant" = "indianred3",
                                    "Not Significant" = "grey80")) +
       labs(fill = sprintf("Significance (FDR < %s)", significance_threshod),
-           y = sprintf("Significant Experiments - %s Sig Exps", num_sig)) +
+           y = sprintf("Significance (FWER < 0.01)\n- %s Significant Experiments", num_sig)) +
       theme(legend.position = "right",
             legend.text = element_text(size = 8),  # change legend text size
             legend.title = element_text(size = 10)) +
@@ -690,7 +698,7 @@ generate_strip_lollipop_plot_vertical <- function(test_result_list,
     if (!score_legend){  # remove legend for stacked plots
       # combine the plots for final
       p_combined <-
-        cowplot::plot_grid(p_strip + theme(legend.position = "none"),  # remove legend for stacked plots
+        cowplot::plot_grid(p_strip + theme(legend.position = "none") + labs(y = "\nEnrichment Score Rank"),  # remove legend for stacked plots
                            p_sig + theme(legend.position = "none"),
                            p_lollipop +  # remove axis and legends because it will be annotated in the strip plot
                              theme(legend.position = "none") +
@@ -701,7 +709,7 @@ generate_strip_lollipop_plot_vertical <- function(test_result_list,
                            nrow = 1,
                            align = "h",
                            axis = "tb",
-                           rel_widths = c(1, 1, 2.5))  #note the ratio is a bit different
+                           rel_widths = c(1, 1, 2))  #note the ratio is a bit different
     } else {  # remove legend for stacked plots
       # combine the plots for final
       p_combined_plot_area <-
@@ -715,7 +723,7 @@ generate_strip_lollipop_plot_vertical <- function(test_result_list,
                            nrow = 1,
                            align = "h",
                            axis = "tb",
-                           rel_widths = c(1, 1, 2.5))  #note the ratio is a bit different
+                           rel_widths = c(1, 1, 2))  #note the ratio is a bit different
       # combine legend
       p_combined_legend <-
         cowplot::plot_grid(cowplot::get_legend(p_strip),
@@ -776,8 +784,9 @@ add_plot_title <- function(p_combined, plot_title, title_ratio = 10, left_margin
       plot_title,
       fontface = 'bold',
       x = 0.5,
-      hjust = 0.5,
-      size = 10,
+      hjust = 1,
+      size = 12,
+      vjust = 0.5,
       color = title_color) +
     theme(
       # add margin on the left of the drawing canvas,

@@ -359,7 +359,9 @@ generate_SPARKS_sorted_barplot_with_highlight <- function(test_result_list, spl_
 
 #' @export
 ## Subset data if necessary
-calculate_new_psi_for_subset_of_samples <- function(study_mats, comp_sample_id_1, comp_sample_id_2, count_threshold = 20){
+calculate_new_psi_for_subset_of_samples <- function(study_mats, comp_sample_id_1, comp_sample_id_2,
+                                                    count_threshold = 20,
+                                                    min_threshold = 20){
 
   # make copy to update the values
   study_mats_temp <- study_mats
@@ -431,7 +433,7 @@ calculate_new_psi_for_subset_of_samples <- function(study_mats, comp_sample_id_1
   study_mats_clean$min_count <- unlist(lapply(study_mats_clean$count_values,
                                               function(input_counts) min(do.call(as.numeric, strsplit(input_counts, ",")))))
 
-  study_mats_temp <- subset(study_mats_clean, avg_count >= count_threshold & min_count >= count_threshold) %>% arrange(-beta)
+  study_mats_temp <- subset(study_mats_clean, avg_count >= count_threshold & min_count >= min_threshold) %>% arrange(-beta)
   return(study_mats_temp)
 }
 

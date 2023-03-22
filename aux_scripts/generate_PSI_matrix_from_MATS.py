@@ -93,20 +93,24 @@ if __name__ == "__main__":
     input_args.add_argument("output_dir", help="output dir to store filtered MATS df file")
     input_args.add_argument("study", help="Study to annotate the output file")
     input_args.add_argument('--one_group', help="One group mode for rMATS run without stats mode", action="store_true")
+    input_args.add_argument('--SE', help="Run this script for SE only", action="store_true")
+
     args = parser.parse_args()
 
     input_dir = args.input_dir
     output_dir = args.output_dir
     study = args.study
     one_group_mode = args.one_group
-
+    se_mode = args.SE
 
     # make analysis dir if it does not exist
     if not os.path.exists(output_dir):  
         os.makedirs(output_dir)
 
-
-    event_type_list = ['SE', 'A3SS', 'A5SS', 'RI']
+    if se_mode:
+        event_type_list = ['SE']
+    else: 
+        event_type_list = ['SE', 'A3SS', 'A5SS', 'RI']
 
     # process 
     for event_type in event_type_list:
