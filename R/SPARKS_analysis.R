@@ -934,7 +934,7 @@ perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
   # calculate correlation for signature
   test_result_df_list <- pbmcapply::pbmclapply(names(kd_library), function(signature){
 
-    print(signature)
+    # print(signature)
     # filter out by count
     test_mats <- kd_library[[signature]]
     test_mats_filtered <- subset(test_mats, !(event %in% uninformative_events))
@@ -962,9 +962,9 @@ perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
     interest_event_lib_full <- SPARKS::extract_GSEA_significant_events(test_mats)
     interest_event_lib_filtered <- SPARKS::extract_GSEA_significant_events(test_mats_filtered)
 
-    print(signature)
-    print(length(interest_event_lib_filtered$positive))
-    print(length(interest_event_lib_filtered$negative))
+    # print(signature)
+    # print(length(interest_event_lib_filtered$positive))
+    # print(length(interest_event_lib_filtered$negative))
 
     # print(library_sig_interest)
     gsea_result_full <- calculate_fgsea_score(interest_event_lib_full, study_rank)
