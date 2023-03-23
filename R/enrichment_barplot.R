@@ -9,7 +9,7 @@ generate_enrichment_barplot <- function(result_df,
                                         manual_colors = list()){
   # calculate padj if it isn't there
   if (!("padj" %in% colnames(result_df))){
-    print("padj missing, calculating again")
+    # print("padj missing, calculating again")
     result_df <- calculate_SPARKS_padj(result_df)
   }
 

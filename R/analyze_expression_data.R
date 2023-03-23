@@ -39,7 +39,7 @@ perform_DE_analysis <- function(object, group_one, group_two){
   return(object)
 }
 
-
+#' @export
 query_expression_data_for_gene_set <- function(object, gene_list){
   expression_df <- object@exp_df
 
