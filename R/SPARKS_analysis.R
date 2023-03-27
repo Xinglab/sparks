@@ -905,23 +905,33 @@ perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
                                                         method = "GSEA",
                                                         num_cores = 3,
                                                         overlap_ratio_threshold = 0.30,
-                                                        library_list = c()){
-  # query null events
-  event_list <- list()
+                                                        library_list = c(),
+                                                        event_count_df = data.frame(),
+                                                        library_size = 675){
+  ## remove frequently affected events by knockdown
+  if (dim(event_count_df)[1] != 0){  # use pre-compiled list if it is there
+    uninformative_events <- event_count_df[event_count_df$count > library_size * overlap_ratio_threshold, ]$event
+  } else {  # calculate the count for each event and filter them
+    #  events
+    event_list <- list()
 
-  # extract all sig events in the library
-  dummy <- lapply(names(kd_library), function(experiment){
-    sig_events <- unlist(extract_GSEA_significant_events(kd_library[[experiment]]))
-    event_list[[length(event_list) + 1]] <<- sig_events
-    return()
-  })
+    # extract all sig events in the library
+    dummy <- lapply(names(kd_library), function(experiment){
+      sig_events <- unlist(extract_GSEA_significant_events(kd_library[[experiment]]))
+      event_list[[length(event_list) + 1]] <<- sig_events
+      return()
+    })
 
-  # generate list and weight for them
-  null_event <- unique(unlist(event_list))
-  null_weight <- table(unlist(event_list))
+    # generate list of AS events and count for them
+    # null_event <- unique(unlist(event_list))
+    event_count_df <- as.data.frame(table(unlist(event_list)), stringsAsFactors = FALSE)
+    colnames(event_count_df) <- c("event", "count")
 
-  # define uninformative events
-  uninformative_events <- names(null_weight)[null_weight > length(kd_library) * overlap_ratio_threshold]
+    # define uninformative events
+    # uninformative_events <- names(null_weight)[null_weight > length(kd_library) * overlap_ratio_threshold]
+    uninformative_events <- event_count_df[event_count_df$count > length(kd_library) * overlap_ratio_threshold, ]$event
+  }
+
 
   study_mats_clean <- study_mats[, c("event", "pulled_delta_psi")]
   study_rank <- study_mats_clean$pulled_delta_psi
@@ -1191,7 +1201,9 @@ add_custom_library_to_SPARKS_test_result <- function(input_mats,
                                                      input_result,
                                                      test_mats,
                                                      test_study,
-                                                     kd_library){
+                                                     kd_library = list(),
+                                                     event_count_df = data.frame(),
+                                                     library_size = 675){
 
   # remove spl type if there is one just in case
   if ("spl_type" %in% colnames(input_result)){
@@ -1203,18 +1215,25 @@ add_custom_library_to_SPARKS_test_result <- function(input_mats,
     input_result$gsea_rank <- NULL
   }
 
-  # add the entry to library
-  added_library <- kd_library
-  added_library[[test_study]] <- test_mats
-
-
+  if ((dim(event_count_df)[1] == 0) & (length(kd_library) > 0)){  # if event count is not given, update the whole library
+    # add the entry to library
+    added_library <- kd_library
+    added_library[[test_study]] <- test_mats
+  } else if ((dim(event_count_df)[1] >= 0) & (length(kd_library) == 0)) {  # if event count is given, skip the library step
+    added_library <- list()
+    added_library[[test_study]] <- test_mats
+  } else {  # if neither or both is given - it is unclear so stop
+    stop("Library input/count is missing or both present. Please check your parameter")
+  }
 
   # run the new analysis only on the new entry
   new_test_result <- perform_SPARKS_analysis_with_overlap_filter(input_mats,
                                                                  added_library,
                                                                  study = unique(input_result$S2)[1],  # this should be one entry
                                                                  library_list = c(test_study),
-                                                                 num_cores = 1)
+                                                                 num_cores = 1,
+                                                                 event_count_df = event_count_df,
+                                                                 library_size = 675)
   # combine the new result
   combined_test_result <- rbind(input_result, new_test_result)
 

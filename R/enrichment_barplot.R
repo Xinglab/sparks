@@ -6,7 +6,9 @@ generate_enrichment_barplot <- function(result_df,
                                         sig_test_method = "bonferroni",
                                         num_plot = NA,
                                         select_genes = c(),
-                                        manual_colors = list()){
+                                        manual_colors = list(),
+                                        text_scale_factor = 1,
+                                        select_gene_marker = F){
   # calculate padj if it isn't there
   if (!("padj" %in% colnames(result_df))){
     # print("padj missing, calculating again")
@@ -33,7 +35,7 @@ generate_enrichment_barplot <- function(result_df,
     # subset if top N is given and change plot annotation
     if (!is.na(num_plot)){
       # change x lab
-      x_lab <- sprintf("Top %s significantly enriched experiments\nTotal # significant experiment = %s", min(num_plot, dim(sig_subset_df)), dim(sig_subset_df)[1])
+      x_lab <- sprintf("Top %s significantly enriched experiments\nTotal # significant experiment = %s", min(num_plot, dim(sig_subset_df)[1]), dim(sig_subset_df)[1])
 
       # subset by top N
       sig_subset_df <- sig_subset_df %>% top_n(abs(gsea_score), n = num_plot)
@@ -55,11 +57,11 @@ generate_enrichment_barplot <- function(result_df,
                                    manual_colors[rbp_s1],
                                    "black")),
                                    angle = 90,
-                size = 3)+
-      theme(axis.text.y   = element_text(size=8),
-            axis.text.x   = element_text(size=8),
-            axis.title.y  = element_text(size=10),
-            axis.title.x  = element_text(size=10),
+                size = 3 * text_scale_factor)+
+      theme(axis.text.y   = element_text(size = 8 * text_scale_factor),
+            axis.text.x   = element_text(size = 8 * text_scale_factor),
+            axis.title.y  = element_text(size = 10 * text_scale_factor),
+            axis.title.x  = element_text(size = 10 * text_scale_factor),
             panel.background = element_blank(),
             panel.grid.major = element_blank(),
             panel.grid.minor = element_blank(),
@@ -86,7 +88,7 @@ generate_enrichment_barplot <- function(result_df,
         p + geom_text(aes(label = plot_rank,
                           x = S1,
                           y = ifelse(gsea_score > 0, gsea_score + 0.1, gsea_score - 0.1)),
-                      size = 2.25,
+                      size = 2.25 * text_scale_factor,
                       angle = 90,
                       vjust = 0.5)
     }
@@ -133,11 +135,11 @@ generate_enrichment_barplot <- function(result_df,
                                    manual_colors[rbp_s1],
                                    "black")),
                                    angle = 90,
-                size = 3) +
-      theme(axis.text.y   = element_text(size=8),
-            axis.text.x   = element_text(size=8),
-            axis.title.y  = element_text(size=10),
-            axis.title.x  = element_text(size=10),
+                size = 3 * text_scale_factor) +
+      theme(axis.text.y   = element_text(size = 8 * text_scale_factor),
+            axis.text.x   = element_text(size = 8 * text_scale_factor),
+            axis.title.y  = element_text(size = 10 * text_scale_factor),
+            axis.title.x  = element_text(size = 10 * text_scale_factor),
             panel.background = element_blank(),
             panel.grid.major = element_blank(),
             panel.grid.minor = element_blank(),
@@ -161,7 +163,7 @@ generate_enrichment_barplot <- function(result_df,
                        aes(label = ifelse(pval_sig == "sig", "*", ""),
                            x = S1),
                        y = ceiling(max(abs(merged_subset_df$gsea_score) + 0.1) * 4) / 4 + 0.05,
-                       size = 4,
+                       size = 4 * text_scale_factor,
                        vjust = 0.5,
                        hjust = 0,
                        color = "dodgerblue1") +
@@ -169,7 +171,7 @@ generate_enrichment_barplot <- function(result_df,
                 aes(label = ifelse(rank_sig == "sig", "#", ""),
                     x = S1),
                 y = ceiling(max(abs(merged_subset_df$gsea_score) + 0.1) * 4) / 4 + 0.05,
-                size = 3,
+                size = 3 * text_scale_factor,
                 vjust = 0,
                 hjust = 1,
                 color = "indianred2")
@@ -179,9 +181,14 @@ generate_enrichment_barplot <- function(result_df,
         p + geom_text(aes(label = plot_rank,
                           x = S1,
                           y = ifelse(gsea_score > 0, gsea_score + 0.1, gsea_score - 0.1)),
-                      size = 2.25,
+                      size = 2.25 * text_scale_factor,
                       angle = 90,
                       vjust = 0.5)
+    }
+
+    if(select_gene_marker){
+      p <- p +
+        labs(subtitle = c("# : within top/bottom 5%\n* : FWER < 0.01"))
     }
 
     return(p)
