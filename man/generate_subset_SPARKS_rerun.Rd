@@ -2,7 +2,7 @@
 % Please edit documentation in R/SPARKS_analysis.R
 \name{generate_subset_SPARKS_rerun}
 \alias{generate_subset_SPARKS_rerun}
-\title{Title}
+\title{Subset SPARKS object for subsets}
 \usage{
 generate_subset_SPARKS_rerun(
   input_sparks,
@@ -33,5 +33,5 @@ generate_subset_SPARKS_rerun(
 subset_SPARKS_object
 }
 \description{
-Title
+Subset SPARKS object for subsets
 }

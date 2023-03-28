@@ -536,7 +536,7 @@ calculate_new_psi_for_subset_of_samples <- function(study_mats,
 
 
 
-#' Title
+#' Subset SPARKS object for subsets
 #'
 #' @param input_sparks Input SPARKS object
 #' @param kd_library_all Signature library for all splice type
