@@ -1,41 +1,28 @@
+#' Generate scatter plot with linear fit statistics between two AS changes
+#'
+#' @param s1_mats_df Filtered MATS df for study 1
+#' @param s2_mats_df Filtered MATS df for study 2
+#' @param study_1 Name for study 1
+#' @param study_2 Name for study 2
+#' @param beta_threshold Minimum delPSI threshold. AS events below this for either studies are discarded.
+#' @param slope If TRUE - show slope of the linear fit
+#'
+#' @return Scatter plot of AS changes betwene those two studies
 #' @export
 generate_RBP_KD_correlation_scatter_plot <- function(s1_mats_df,
                                                      s2_mats_df,
                                                      study_1,
                                                      study_2,
                                                      beta_threshold = 0.1,
-                                                     permute = FALSE,
-                                                     fdr = FALSE,
-                                                     slope = FALSE
-){
+                                                     slope = FALSE){
 
   # merge each mats by event
   merged_mats_df <- merge(s1_mats_df, s2_mats_df, by = "event")
 
   delta_psi_df_prefilter <- merged_mats_df[, c("beta.x", "beta.y")]
   rownames(delta_psi_df_prefilter) <- merged_mats_df$event
-  # delta_psi_df_prefilter <- merged_mats_df[abs(merged_mats_df$beta.x) > 0.1 | merged_mats_df$fdr.x < 0.01, c("beta.x", "beta.y")]
-  if(fdr){
-    delta_psi_df_prefilter <- merged_mats_df[merged_mats_df$fdr.x < 0.05 | merged_mats_df$fdr.y < 0.05, c("beta.x", "beta.y")]
-  }
   colnames(delta_psi_df_prefilter) <- c("S1", "S2")
 
-  if (permute){
-    psi_df_any_sig_permuted <- psi_df_any_sig
-    ## permute in each significant quadrant only
-    # extract the quadrant info
-    pos_pos_quad <- subset(delta_psi_df_prefilter, S1 > beta_threshold & S2 > beta_threshold)
-    pos_neg_quad <- subset(delta_psi_df_prefilter, S1 > beta_threshold & S2 < -beta_threshold)
-    neg_pos_quad <- subset(delta_psi_df_prefilter, S1 < -beta_threshold & S2 > beta_threshold)
-    neg_neg_quad <- subset(delta_psi_df_prefilter, S1 < -beta_threshold & S2 < -beta_threshold)
-
-    # shuffle S2
-    delta_psi_df_prefilter[rownames(pos_pos_quad), ]$S2 <- sample(pos_pos_quad$S2)
-    delta_psi_df_prefilter[rownames(pos_neg_quad), ]$S2 <- sample(pos_neg_quad$S2)
-    delta_psi_df_prefilter[rownames(neg_pos_quad), ]$S2 <- sample(neg_pos_quad$S2)
-    delta_psi_df_prefilter[rownames(neg_neg_quad), ]$S2 <- sample(neg_neg_quad$S2)
-
-  }
   # calculate number of total observations
   num_complete <- sum(rowSums(!is.na(delta_psi_df_prefilter)) == 2 )
   num_S1_total <- sum(!is.na(delta_psi_df_prefilter$S1))
