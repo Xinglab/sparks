@@ -15,5 +15,5 @@ import_expression_matrix(object, input_exp_file)
 object with the expression dataframe added
 }
 \description{
-This function reads in the file and filteres the data and add it to the object
+This function reads in the file and filters the data and add it to the object
 }
