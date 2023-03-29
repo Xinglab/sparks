@@ -1,4 +1,18 @@
-#'@export
+#' Generate enrichment bar plot for SPARKS result
+#'
+#' @param result_df SPARKS analysis result
+#' @param bar_color Color for the bars - default = grey75
+#' @param rank_label If true (default), show ranking of each signatures on top
+#' @param sig_threshold FWER threshold - default = 0.01
+#' @param sig_test_method Multiple testing correction method - default = "bonferroni"
+#' @param num_plot Number of signatures to plot, top N signatures based on abs(ES) are shown
+#' @param select_genes If provided, signatures perturbing these genes would be shown in the plot, regardless of their rank/ES. This function also generates rank and FWER indicator on top of the bar
+#' @param manual_colors List of genes and color for their text e.g. list('SRSF1' = 'red') will show any signatures with SRSF1 perturbation in red
+#' @param text_scale_factor Scale factor for shiny app
+#' @param select_gene_marker Explanation for rank and FWER indicator on top of the bar - Use if select genes are activated and don't want to add additional label for the indicators
+#'
+#' @return Enrichment bar plot
+#' @export
 generate_enrichment_barplot <- function(result_df,
                                         bar_color = "grey75",
                                         sig_threshold = 0.01,

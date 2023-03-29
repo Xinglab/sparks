@@ -1,5 +1,4 @@
 ###### FUNCTIONS  #####
-#' @export
 calculate_RBP_KD_correlation_from_mats <- function(kd_mats_df,
                                                    study_sig_df,
                                                    study_1,
@@ -180,7 +179,6 @@ calculate_RBP_KD_correlation_from_mats <- function(kd_mats_df,
 
 
 
-#' @export
 calculate_RBP_KD_correlation_from_mats_fdr <- function(kd_mats_df,
                                                        study_sig_df,
                                                        study_1,
@@ -363,7 +361,6 @@ calculate_RBP_KD_correlation_from_mats_fdr <- function(kd_mats_df,
 
 
 # permute PSI df and calculate score
-#' @export
 calculate_permuted_score_from_psi_df <- function(delta_psi_df,
                                                  beta_threshold = 0.1,
                                                  num_permutation = 100,
@@ -440,7 +437,6 @@ calculate_permuted_score_from_psi_df <- function(delta_psi_df,
 
 
 
-#' @export
 calculate_RBP_KD_concordance_from_mats <- function(kd_mats_df,
                                                    study_sig_df,
                                                    study_1,
@@ -522,7 +518,6 @@ calculate_RBP_KD_concordance_from_mats <- function(kd_mats_df,
   return(result_df)
 }
 
-#' @export
 calculate_RBP_KD_concordance_from_mats_fdr <- function(kd_mats_df,
                                                        study_sig_df,
                                                        study_1,
@@ -597,7 +592,6 @@ calculate_RBP_KD_concordance_from_mats_fdr <- function(kd_mats_df,
 }
 
 
-#' @export
 GSEA.EnrichmentScore <-
   function(gene.list, gene.set, weighted.score.type = 1, correl.vector = NULL) {
 
@@ -654,7 +648,6 @@ calculate_GSEA_score <- function(input_signature_list, test_pos_events, test_neg
 }
 
 
-#' @export
 calculate_pulled_binomial_pval <- function(psi_1,
                                            psi_2,
                                            total_count_1,
@@ -668,7 +661,6 @@ calculate_pulled_binomial_pval <- function(psi_1,
 
 
 # pseudo binomial pval
-#' @export
 calculate_pulled_binomial_pval_for_mats <- function(input_mats_df) {
   pval_list <- unlist(apply(input_mats_df, 1, function(x){
 
