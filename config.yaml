@@ -2,7 +2,6 @@ paired_end : True
 study : "Yang"
 read_length : "101"
 stat_mode : True
-clip_mode : True
 analysis_mode : True
 
 sample_definition:

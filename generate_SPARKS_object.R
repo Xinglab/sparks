@@ -1,10 +1,7 @@
 library('SPARKS')
 library("optparse")
-library(maftools)
-library(ggplot2)
 library(stringr)
 library(reshape2)
-library(RColorBrewer)
 # load gtools for mixedsort for chromosome-level coordinate sorting
 library(gtools)
 library(data.table)
@@ -21,11 +18,6 @@ option_list = list(
   make_option(c("--psi_RI"), type = "character", default = NULL, help = "PSI matrix for RI"),
 
   make_option(c("--exp"), type = "character", default = NULL, help = "Expression matrix"),
-
-  make_option(c("--CLIP_SE"), type = "character", default = NULL, help = "ENCODE CLIP-Seq overlap for SE events"),
-  make_option(c("--CLIP_A3SS"), type = "character", default = NULL, help = "ENCODE CLIP-Seq overlap for A3SS events"),
-  make_option(c("--CLIP_A5SS"), type = "character", default = NULL, help = "ENCODE CLIP-Seq overlap for A5SS events"),
-  make_option(c("--CLIP_RI"), type = "character", default = NULL, help = "ENCODE CLIP-Seq overlap for RI events"),
 
   make_option(c("--exon_anno_SE"), type = "character", default = NULL, help = "Exon annotation for SE events"),
   make_option(c("--exon_anno_A3SS"), type = "character", default = NULL, help = "Exon annotation for A3SS events"),
@@ -60,28 +52,6 @@ sparks_obj <- import_PSI_df(sparks_obj, input_psi_file_RI, "RI")
 if (!(is.null(opt$exp))){
   input_exp_file <- opt$exp
   sparks_obj <- import_expression_matrix(sparks_obj, input_exp_file)
-}
-
-
-# import clip data
-if (!(is.null(opt$CLIP_SE))){
-  input_clip_SE <- opt$CLIP_SE
-  sparks_obj <- import_ENCODE_CLIP_intersect_data(sparks_obj, input_clip_SE, "SE")
-}
-
-if (!(is.null(opt$CLIP_A3SS))){
-  input_clip_A3SS <- opt$CLIP_A3SS
-  sparks_obj <- import_ENCODE_CLIP_intersect_data(sparks_obj, input_clip_A3SS, "A3SS")
-}
-
-if (!(is.null(opt$CLIP_A5SS))){
-  input_clip_A5SS <- opt$CLIP_A5SS
-  sparks_obj <- import_ENCODE_CLIP_intersect_data(sparks_obj, input_clip_A5SS, "A5SS")
-}
-
-if (!(is.null(opt$CLIP_RI))){
-  input_clip_RI <- opt$CLIP_RI
-  sparks_obj <- import_ENCODE_CLIP_intersect_data(sparks_obj, input_clip_RI, "RI")
 }
 
 # import exon annotation data for downstream analysis

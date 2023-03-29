@@ -4,3 +4,102 @@
 .Ruserdata
 data/*
 *.RData
+figures/benchmark/benchmark_cdf.Weighted Null with Monte Carlo samping.800.png
+figures/benchmark/benchmark_cdf.Weighted Null with Monte Carlo samping.75.png
+figures/benchmark/benchmark_cdf.Weighted Null with Monte Carlo samping.700.png
+figures/benchmark/benchmark_cdf.Weighted Null with Monte Carlo samping.600.png
+figures/benchmark/benchmark_cdf.Weighted Null with Monte Carlo samping.500.png
+figures/benchmark/benchmark_cdf.Weighted Null with Monte Carlo samping.50.png
+figures/benchmark/benchmark_cdf.Weighted Null with Monte Carlo samping.400.png
+figures/benchmark/benchmark_cdf.Weighted Null with Monte Carlo samping.300.png
+figures/benchmark/benchmark_cdf.Weighted Null with Monte Carlo samping.250.png
+figures/benchmark/benchmark_cdf.Weighted Null with Monte Carlo samping.25.png
+figures/benchmark/benchmark_cdf.Weighted Null with Monte Carlo samping.200.png
+figures/benchmark/benchmark_cdf.Weighted Null with Monte Carlo samping.150.png
+figures/benchmark/benchmark_cdf.Weighted Null with Monte Carlo samping.100.png
+figures/benchmark/benchmark_cdf.sig_weighted_75.png
+figures/benchmark/benchmark_cdf.sig_weighted_500.png
+figures/benchmark/benchmark_cdf.sig_weighted_50.png
+figures/benchmark/benchmark_cdf.sig_weighted_400.png
+figures/benchmark/benchmark_cdf.sig_weighted_300.png
+figures/benchmark/benchmark_cdf.sig_weighted_250.png
+figures/benchmark/benchmark_cdf.sig_weighted_25.png
+figures/benchmark/benchmark_cdf.sig_weighted_200.png
+figures/benchmark/benchmark_cdf.sig_weighted_150.png
+figures/benchmark/benchmark_cdf.sig_weighted_100.png
+figures/benchmark/benchmark_cdf.sig_native_75.png
+figures/benchmark/benchmark_cdf.sig_native_500.png
+figures/benchmark/benchmark_cdf.sig_native_50.png
+figures/benchmark/benchmark_cdf.sig_native_250.png
+figures/benchmark/benchmark_cdf.sig_native_25.png
+figures/benchmark/benchmark_cdf.sig_native_200.png
+figures/benchmark/benchmark_cdf.sig_native_150.png
+figures/benchmark/benchmark_cdf.sig_native_100.png
+figures/benchmark/benchmark_cdf.sig_native_0.05.png
+figures/benchmark/benchmark_cdf.naive_fdr_0.05.png
+figures/benchmark/benchmark_cdf.naive_count_90.png
+figures/benchmark/benchmark_cdf.naive_count_80.png
+figures/benchmark/benchmark_cdf.naive_count_70.png
+figures/benchmark/benchmark_cdf.naive_count_60.png
+figures/benchmark/benchmark_cdf.naive_count_500.png
+figures/benchmark/benchmark_cdf.naive_count_50.png
+figures/benchmark/benchmark_cdf.naive_count_40.png
+figures/benchmark/benchmark_cdf.naive_count_30.png
+figures/benchmark/benchmark_cdf.naive_count_250.png
+figures/benchmark/benchmark_cdf.naive_count_200.png
+figures/benchmark/benchmark_cdf.naive_count_20.png
+figures/benchmark/benchmark_cdf.naive_count_150.png
+figures/benchmark/benchmark_cdf.naive_count_100.png
+figures/benchmark/benchmark_cdf.Final_analysis.75.png
+figures/benchmark/benchmark_cdf.Final_analysis.50.png
+figures/benchmark/benchmark_cdf.Final_analysis.5.png
+figures/benchmark/benchmark_cdf.Final_analysis.45.png
+figures/benchmark/benchmark_cdf.Final_analysis.40.png
+figures/benchmark/benchmark_cdf.Final_analysis.35.png
+figures/benchmark/benchmark_cdf.Final_analysis.30.png
+figures/benchmark/benchmark_cdf.Final_analysis.25.png
+figures/benchmark/benchmark_cdf.Final_analysis.20.png
+figures/benchmark/benchmark_cdf.Final_analysis.15.png
+figures/benchmark/benchmark_cdf.Final_analysis.100.png
+figures/benchmark/benchmark_cdf.Final_analysis.10.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_FDR_cor.75.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_FDR_cor.50.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_FDR_cor.5.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_FDR_cor.40.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_FDR_cor.30.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_FDR_cor.20.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_FDR_cor.15.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_FDR_cor.100.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_FDR_cor.10.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_extra.75.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_extra.50.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_extra.5.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_extra.40.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_extra.30.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_extra.20.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_extra.15.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_extra.100.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA_extra.10.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA.75.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA.50.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA.5.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA.40.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA.30.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA.20.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA.15.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA.100.png
+figures/benchmark/benchmark_cdf.Filtered_FGSEA.10.png
+R/temp/*
+manuscript/*
+rbp_list.csv
+test.all.gmt
+test.positive.gmt
+test.rnk
+analysis/temp2/*
+library/SPARKS_library.SE.rds
+images/image-1799533001.png
+images/image-2041142213.png
+aux_scripts/wrapper_for_start_to_sparks_rerun
+aux_scripts/filter_minimum_count_for_library_all_spltype.R
+aux_scripts/filter_minimum_count_for_library.R
+aux_scripts/wrapper_for_start_to_sparks_rerun
