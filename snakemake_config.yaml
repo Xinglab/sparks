@@ -9,8 +9,6 @@ create_STAR_reference_threads: 6
 create_STAR_reference_time_hr: 12
 filter_psi_matrix_mem_gb: 32
 filter_psi_matrix_time_hr: 12
-find_clip_peak_overlap_mem_gb: 32
-find_clip_peak_overlap_time_hr: 12
 generate_psi_matrix_from_mats_mem_gb: 8
 generate_psi_matrix_from_mats_time_hr: 12
 generate_psi_matrix_mem_gb: 8
@@ -26,7 +24,6 @@ run_rmats_post_time_hr: 24
 run_rmats_prep_mem_gb: 32
 run_rmats_prep_time_hr: 24
 # Command options
-clip_mode: true
 analysis_mode: true
 read_length: 101
 # Reference files

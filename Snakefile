@@ -650,37 +650,6 @@ rule convert_and_merge_kallisto_run:
         ' 1> {log.out}'
         ' 2> {log.err}'
 
-rule find_clip_peak_overlap:
-    input:
-        filtered=os.path.join('rMATS_matrix',
-                              'filtered_psi.matrix.{cancer_type}.{event_type}.csv'),
-    output:
-        clip=os.path.join('CLIP', '{cancer_type}.CLIP_overlap.{event_type}.tsv'),
-    log:
-        out=os.path.join(
-            'CLIP', 'find_clip_peak_overlap_{cancer_type}_{event_type}_log.out'),
-        err=os.path.join(
-            'CLIP', 'find_clip_peak_overlap_{cancer_type}_{event_type}_log.err'),
-    params:
-        conda_wrapper=config['conda_wrapper'],
-        script=os.path.join(config['scripts_dir'],
-                            'find_CLIP_peak_overlap.py'),
-        out_dir='CLIP',
-        encode_bed='/mnt/isilon/xing_lab/aspera/yangt3/ENCODE/bed',  # TODO
-    resources:
-        mem_mb=config['find_clip_peak_overlap_mem_gb'] * 1024,
-        time_hours=config['find_clip_peak_overlap_time_hr'],
-    shell:
-        '{params.conda_wrapper} python'
-        ' {params.script}'
-        ' {input.filtered}'
-        ' {params.out_dir}'
-        ' {wildcards.cancer_type}'
-        ' {wildcards.event_type}'
-        ' --encode_bed {params.encode_bed}'
-        ' 1> {log.out}'
-        ' 2> {log.err}'
-
 
 def generate_SPARKS_object_input(wildcards):
     inputs = dict()
@@ -696,12 +665,6 @@ def generate_SPARKS_object_input(wildcards):
             'rMATS_matrix',
             'AS_annotation.{}.{}.txt'.format(event_type,
                                              wildcards.cancer_type))
-        if config['clip_mode']:
-            inputs['clip_{}'.format(event_type)] = os.path.join(
-                'CLIP',
-                '{}.CLIP_overlap.{}.tsv'.format(wildcards.cancer_type,
-                                                event_type))
-
         if two_group:
             inputs['mats_{}'.format(event_type)] = os.path.join(
                 'rMATS_matrix', '{}.{}.MATS_df.txt'.format(wildcards.cancer_type,
@@ -724,18 +687,6 @@ def generate_SPARKS_object_anno_param(wildcards, input):
     for event_type in USED_EVENT_TYPES:
         args.append('--exon_anno_{}'.format(event_type))
         args.append(input['anno_{}'.format(event_type)])
-
-    return ' '.join(args)
-
-
-def generate_SPARKS_object_clip_param(wildcards, input):
-    if not config['clip_mode']:
-        return ''
-
-    args = list()
-    for event_type in USED_EVENT_TYPES:
-        args.append('--CLIP_{}'.format(event_type))
-        args.append(input['clip_{}'.format(event_type)])
 
     return ' '.join(args)
 
@@ -777,7 +728,6 @@ rule generate_SPARKS_object:
         sparks_lib=generate_SPARKS_object_sparks_lib_param,
         psi=generate_SPARKS_object_psi_param,
         anno=generate_SPARKS_object_anno_param,
-        clip=generate_SPARKS_object_clip_param,
         mats=generate_SPARKS_object_mats_param,
     resources:
         mem_mb=config['generate_SPARKS_object_mem_gb'] * 1024,
@@ -790,7 +740,6 @@ rule generate_SPARKS_object:
         ' {params.sparks_lib}'
         ' {params.psi}'
         ' {params.anno}'
-        ' {params.clip}'
         ' {params.mats}'
         ' 1> {log.out}'
         ' 2> {log.err}'
