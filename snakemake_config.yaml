@@ -1,0 +1,56 @@
+cancer_type: 'test'
+# Resource allocation
+generate_SPARKS_object_mem_gb: 32
+generate_SPARKS_object_time_hr: 12
+convert_and_merge_kallisto_run_mem_gb: 32
+convert_and_merge_kallisto_run_time_hr: 12
+create_STAR_reference_mem_gb: 64
+create_STAR_reference_threads: 6
+create_STAR_reference_time_hr: 12
+filter_psi_matrix_mem_gb: 32
+filter_psi_matrix_time_hr: 12
+find_clip_peak_overlap_mem_gb: 32
+find_clip_peak_overlap_time_hr: 12
+generate_psi_matrix_from_mats_mem_gb: 8
+generate_psi_matrix_from_mats_time_hr: 12
+generate_psi_matrix_mem_gb: 8
+generate_psi_matrix_time_hr: 12
+quantify_expression_mem_gb: 8
+quantify_expression_time_hr: 12
+run_STAR_mem_gb: 64
+run_STAR_threads: 8
+run_STAR_time_hr: 12
+run_rmats_post_mem_gb: 64
+run_rmats_post_threads: 6
+run_rmats_post_time_hr: 24
+run_rmats_prep_mem_gb: 32
+run_rmats_prep_time_hr: 24
+# Command options
+clip_mode: true
+analysis_mode: true
+read_length: 101
+# Reference files
+gtf_name: 'gencode.v26lift37.annotation.gtf'
+fasta_name: 'ucsc.hg19.fasta'
+reference_files:
+  gencode.v26lift37.annotation.gtf.gz:
+    url: 'ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_26/GRCh37_mapping/gencode.v26lift37.annotation.gtf.gz'
+  ucsc.hg19.fasta.gz:
+    url: 'http://hgdownload.soe.ucsc.edu/goldenPath/hg19/bigZips/hg19.fa.gz'
+  homo_sapiens.tar.gz:
+    url: 'https://github.com/pachterlab/kallisto-transcriptome-indices/releases/download/ensembl-96/homo_sapiens.tar.gz'
+# Input samples
+sample_group_1:
+  sample_1_name:
+    - '/path/to/file_R1.fastq.gz'
+    - '/path/to/file_R2.fastq.gz'
+  sample_2_name:
+    - '/path/to/file_R1.fastq.gz'
+    - '/path/to/file_R2.fastq.gz'
+sample_group_2:
+  sample_3_name:
+    - '/path/to/file_R1.fastq.gz'
+    - '/path/to/file_R2.fastq.gz'
+# Additional configuration
+# conda_wrapper: '/path/to/conda_wrapper'  # should be written by ./install.sh
+# scripts_dir: '/path/to/aux_scripts'  # should be written by ./install.sh

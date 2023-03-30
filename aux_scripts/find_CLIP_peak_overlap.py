@@ -21,7 +21,7 @@ if __name__ == "__main__":
                             help="alternative splicing event type - eg. SE")
     input_args.add_argument('--encode_bed',
                             help="Dir with Peak BED files from ENCODE",
-                            default='/home/yangt3/xinglab/ENCODE/bed/')
+                            default='/mnt/isilon/xing_lab/aspera/yangt3/ENCODE/bed/') # TODO
     input_args.add_argument('--underscore',
                             help="Change process for Exon formatted with underscore",
                             action="store_true")

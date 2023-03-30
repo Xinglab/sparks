@@ -9,7 +9,7 @@ count_threshold = 20
 ### read in the data
 ## input data list
 # input_start_dir <- "/Users/harryyang/research/Xing_Lab/START/test"
-input_start_dir <- "/home/yangt3/xinglab/ENCODE/SPARKS/*/processed/*/"
+## input_start_dir <- "/home/yangt3/xinglab/ENCODE/SPARKS/*/processed/*/" # TODO
 
 input_start_list <- Sys.glob(sprintf('%s/*.SPARKS.rds', input_start_dir))
 

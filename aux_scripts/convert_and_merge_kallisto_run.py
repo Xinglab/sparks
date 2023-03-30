@@ -18,6 +18,8 @@ if __name__ == "__main__":
     input_args.add_argument("input_dir", help="Dir with kallisto run. Should contain dirs ending with *_quant")
     input_args.add_argument("output_dir", help="Where the merged and converted count would be stored")
     input_args.add_argument("study", help="study name")
+    input_args.add_argument("--transcripts-to-genes", required=True,
+                            help="path to transcripts_to_genes.txt from kallisto reference data")
     args = parser.parse_args()
 
     input_dir = args.input_dir
@@ -25,7 +27,7 @@ if __name__ == "__main__":
     study = args.study
 
     # read kallisto conversion table
-    kallisto_conversion_table_file = "/home/yangt3/xinglab/references/kallisto/homo_sapiens/transcripts_to_genes.txt"
+    kallisto_conversion_table_file = args.transcripts_to_genes
     kallisto_conversion_df = pd.read_csv(kallisto_conversion_table_file, sep='\t', header=None,
                                          names=['transcript_ID','gene_ID', 'gene_symbol'])
 
