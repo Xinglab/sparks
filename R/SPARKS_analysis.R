@@ -1,70 +1,107 @@
-##### FUNCTION #####
-## Perform SPARKS test
+##### SUBFUNCTIONS #####
+
+
+#' Calculate adjusted p-value for SPARKS analysis results
+#'
+#' This function sets the padj.
+#' Any signatures with the same sign between positive ES and nevative ES are set
+#' to have padj of 1, so they wouldn't be considered significant.
+#' This approach is similar to C-MAP paper (Lamb et al., Science 2006) that
+#' they remove any signatures with same sign are removed.
+#'
+#' @param sparks_result SPARKS analysis dataframe
+#' @param sig_test_method p.adjust method - "BH" for FDR, "bonferroni" (default) for FWER
+#' @param same_sign_ES_threshold Set any signatures with abs score below this when sign from pos and neg signature sets are the same
+#'
+#' @return SPARKS analysis dataframe with padj added
 #' @export
-perform_SPARKS_analysis <- function(study_mats, kd_library, study, method = "GSEA", num_cores = 3){
+calculate_SPARKS_padj <- function(sparks_result, sig_test_method = "bonferroni", same_sign_ES_threshold = 0.5){
+  # calculate raw padj
+  sparks_result$padj <- p.adjust(sparks_result$gsea_combined_pval,
+                                 method = sig_test_method)
 
-  # divide pos events and neg events for GSEA query
-  test_event_list <- extract_GSEA_significant_events(study_mats)
-  test_pos_events <- test_event_list$positive
-  test_neg_events <- test_event_list$negative
+  # flatten if the sign is the same but the score is below the threhsold
+  sparks_result[(sign(sparks_result$gsea_pos_score) == sign(sparks_result$gsea_neg_score)) &
+                  (sparks_result$gsea_score_abs < same_sign_ES_threshold), ]$padj <- 1
 
-  # calculate correlation for signature
-  test_result_df <- do.call(rbind, pbmcapply::pbmclapply(names(kd_library), function(signature){
-    # test_result_df <- do.call(rbind, lapply(names(kd_library), function(signature){
+  return(sparks_result)
+}
 
-    # print(signature)
-    test_mats <- kd_library[[signature]]
 
-    # calculate Rho-based enrichment score
-    result_df <- calculate_RBP_KD_correlation_from_mats(test_mats, study_mats, signature, study, num_permutation = 100, beta_threshold = 0.1)
+#' Calculate enrichment score using FGSEA
+#'
+#' @param gsea_library Signature event list (positive and negative) from `extract_GSEA_significant_events` function
+#' @param study_rank AS events sorted by delta PSI
+#'
+#' @return gsea_result_df Dataframe with enrichment score and pval for positive and negative event sets
+#' @export
+calculate_fgsea_score <- function(gsea_library, study_rank){
+  # calculate score using fgsea
+  gsea_result <- fgsea::fgsea(pathways = gsea_library ,
+                              stats = study_rank,
+                              nproc = 1)
 
-    # calculate Tau-based enrichment score
-    concord_result_df <- calculate_RBP_KD_concordance_from_mats(test_mats, study_mats, signature, study)
-
-    # merge Tau result with Rho result
-    result_df$concordance <- concord_result_df$score
-    result_df$concordance_abs <- concord_result_df$score_abs
-
-    # calculate GSEA-based enrichment score
-    gsea_score <- calculate_GSEA_score(test_mats, test_pos_events, test_neg_events)
-
-    # merge GSEA result to total result
-    result_df$gsea_pos_score <- gsea_score$pos_score
-    result_df$gsea_neg_score <- gsea_score$neg_score
-    result_df$gsea_score <- gsea_score$pos_score - gsea_score$neg_score
-    result_df$gsea_score_abs <- abs(gsea_score$pos_score - gsea_score$neg_score)
-
-    return(result_df)
-  }, mc.cores = num_cores))
-
-  ### calculate RANK for downstream analysis
-  if (method == "GSEA"){
-    test_result_df$rank <- rank(-test_result_df$gsea_score_abs)
-    test_result_df$plot_score <- test_result_df$gsea_score_abs
-  } else if (method == "Pearson"){
-    test_result_df$rank <- rank(-test_result_df$score_abs)
-    test_result_df$plot_score <- test_result_df$score_abs
-  } else if (method == "Kendall"){
-    test_result_df$rank <- rank(-test_result_df$concordance_abs)
-    test_result_df$plot_score <- test_result_df$concordance_abs
+  # return 0 values if the method fails to run on either pos or neg
+  if(dim(gsea_result)[1] < 2){
+    output_df <- data.frame(score = 0,
+                            pos_score = 0,
+                            neg_score = 0,
+                            pos_pval = 0,
+                            neg_pval = 0,
+                            pval = 1)
+    return(output_df)
   }
 
-  return(test_result_df)
+
+  # gather the data
+
+  # combine score
+  neg_score <- subset(gsea_result, pathway == "negative")$ES
+  pos_score <- subset(gsea_result, pathway == "positive")$ES
+
+  combined_score <- pos_score - neg_score
+
+  # combine pval
+  neg_pval <- subset(gsea_result, pathway == "negative")$pval
+  pos_pval <- subset(gsea_result, pathway == "positive")$pval
+  # print(neg_pval)
+  # print(gsea_result)
+
+  if (is.na(neg_pval)){  # if we don't get the enrichment score for some reason..
+    combined_pval <- metap::sumlog(c(pos_pval, 1))$p
+
+  } else if (is.na(pos_pval)){
+    combined_pval <- metap::sumlog(c(neg_pval, 1))$p
+
+    # if(is.na(neg_pval) | is.na(pos_pval)){
+    #   combined_pval <- 1
+    # } else if (sign(pos_score) == sign(neg_score)){  # if the sign is the same, p-value should be 1
+    #   # this is based on CMAP paper (Lamb et al., Science 2006)
+    #   # the CMAP paper makes the score 0, but for our analysis
+    #   # we handle this at the multiple testing correction step
+  } else {
+    fisher_result <- metap::sumlog(c(neg_pval, pos_pval))
+    combined_pval <- fisher_result$p
+  }
+
+  output_df <- data.frame(score = combined_score,
+                          pos_score = pos_score,
+                          neg_score = neg_score,
+                          pos_pval = pos_pval,
+                          neg_pval = neg_pval,
+                          pval = combined_pval)
+  return(output_df)
 }
 
 
-#' @export
-import_SPARKS_MATS_for_analysis <- function(input_start, spl_type, count_threshold = 20){
-  # process the data for analysis
-  known_events <- rownames(subset(input_start@exon_annotation[[spl_type]], annotation == "Known_JC"))
-  study_mats_raw <- input_start@MATS_list[[spl_type]]
-
-  study_mats_known <- study_mats_raw[study_mats_raw$event %in% known_events, ]
-  study_mats_temp <- subset(study_mats_known, avg_count >= count_threshold)
-  return(study_mats_temp)
-}
-
-
+#' Extract signature events for SPARKS
+#'
+#' This function extracts events with abs(delPSI) > 0.1 and store in a list, sepearated in
+#' positive and negative set of AS events
+#'
+#' @param study_mats filtered MATS df
+#'
+#' @return event_list List of events with positive (delPSI > 0.1) and negative (delPSI < -0.1) AS changes
 #' @export
 extract_GSEA_significant_events <- function(study_mats){
   # divide pos events and neg events for query
@@ -85,98 +122,346 @@ extract_GSEA_significant_events <- function(study_mats){
 }
 
 
+#' Rewrite event coordinates
+#'
+#' This function removes unnecessary info in AS event coordinates.
+#'
+#' @param x AS event
+#'
+#' @return filtered_AS_event
 #' @export
-perform_SPARKS_analysis_for_all_splice_types <- function(input_start, kd_library_all,
-                                                         test_study = "", score_method = "GSEA",
-                                                         subset_group_1 = c(), subset_group_2 = c()){
+rewrite_event_coordinates <- function(x){  # clean coordinates
+  # split into elements for processing
+  elements <- strsplit(x, ":")[[1]]
+  # print(elements)
 
-  spl_types <- c("SE", "A3SS", "A5SS")
+  # infer spl type
+  spl_type <- elements[[11]]
 
-  test_result_list <- lapply(spl_types, function(spl_type) {
-    # filter raw data
-    study_mats <- import_SPARKS_MATS_for_analysis(input_start, spl_type)
+  # process each splicing type info to extract only necessary info
+  if (spl_type == "SE"){  # SE don't have directionality
+    new_event <- paste0(c(elements[2:4], elements[8], elements[5:6], elements[9], elements[11]), collapse = ":")
+  } else if (spl_type == "A3SS"){  # directionality matters for A3SS
+    if (elements[[4]] == '+'){  # if positive
+      new_event <- paste0(c(elements[2:4], elements[10], elements[5], elements[7], elements[11]), collapse = ":")
+    } else if (elements[[4]] == "-"){  # if negative
+      new_event <- paste0(c(elements[2:4], elements[9], elements[6], elements[8], elements[11]), collapse = ":")
+    } else {
+      stop()
+    }
+  } else if (spl_type == "A5SS"){
+    if (elements[[4]] == '+'){  # if positive
+      new_event <- paste0(c(elements[2:4], elements[8], elements[6], elements[9], elements[11]), collapse = ":")
+    } else if (elements[[4]] == "-"){  # if negative
+      new_event <- paste0(c(elements[2:4], elements[7], elements[5], elements[10], elements[11]), collapse = ":")
+    } else {
+      stop()
+    }
+  }
+  return(new_event)
+}
 
-    if (length(subset_group_1) > 0 & length(subset_group_2) > 0){
-      study_mats <- calculate_new_psi_for_subset_of_samples(study_mats, subset_group_1, subset_group_2)
+
+##### FUNCTION #####
+
+#' Import MATS for SPARKS analysis from SPARKS object
+#'
+#' This function reads MATS file generated from the pipeline, keep known events,
+#' and filter out events with the read counts below the count_threshold in any
+#' samples.
+#'
+#' It also keeps only necessary information for the AS events defining junctions.
+#'
+#' @param input_sparks Input SPARKS object
+#'
+#' @param spl_type Optional splicing type in c("SE", "A3SS", "A5SS"), default = "SE"
+#' @param count_threshold Average read count for AS events. Events with read counts below this number in average is removed
+#' @param min_threshold Minimum read count for AS events. Events with read counts below this number in any sample is removed
+#'
+#' @return filtered_MATS_df
+#' @export
+import_SPARKS_MATS_for_analysis <- function(input_sparks,
+                                            spl_type = "SE",
+                                            count_threshold = 20,
+                                            min_threshold = 20){
+  # check if the event name is already processed
+  if(length(strsplit(input_sparks@MATS_list[[spl_type]][1, 'event'], ":")[[1]]) == 11){  # if not processed
+    # process the data for analysis
+    known_events <- rownames(subset(input_sparks@exon_annotation[[spl_type]], annotation == "Known_JC"))
+    study_mats_raw <- input_sparks@MATS_list[[spl_type]]
+
+    # keep only the known AS events
+    study_mats_known <- study_mats_raw[study_mats_raw$event %in% known_events, ]
+
+    # update the event to short form
+    study_mats_known$event <- unlist(lapply(study_mats_known$event,
+                                            function(x) rewrite_event_coordinates(x)))
+  } else {  # means the MATS is already processed, so no need to anything
+    study_mats_known <- input_sparks@MATS_list[[spl_type]]
+  }
+
+  study_mats_known$beta <- study_mats_known$pooled_delta_psi
+
+  # calculate minimum_count
+  study_mats_known$min_count <- unlist(lapply(study_mats_known$count_values,
+                                              function(input_counts) min(do.call(as.numeric, strsplit(input_counts, ",")))))
+
+  # filter by minimum count
+  study_mats_temp <- subset(study_mats_known,
+                            avg_count >= count_threshold &
+                              min_count >= count_threshold) %>% arrange(-beta)
+
+  return(study_mats_temp)
+}
+
+
+
+
+
+#' Run SPARKS analysis
+#'
+#' @param study_mats filtered MATS dataframe
+#' @param kd_library Signature library
+#' @param study Study name - this will be stored in "S2" column in the output
+#' @param num_cores Number of cores for parallel run - default = 3
+#' @param overlap_ratio_threshold Threshold to filter out AS events based on their occurrences in the library - default = 30%
+#' @param library_list If given, SPARKS analysis will be performed in only this signatures
+#' @param event_count_df If given, SPARKS will use this to enumerate events to filter out, rather than iterating the library
+#' @param library_size Library size - currently this is 675. This is built in case for future cases where the signature library is expanded. Do not change this for now.
+#'
+#' @return SPARKS_analysis_df
+#' @export
+perform_SPARKS_analysis_with_overlap_filter <- function(study_mats,
+                                                        kd_library,
+                                                        study,
+                                                        num_cores = 3,
+                                                        overlap_ratio_threshold = 0.30,
+                                                        library_list = c(),
+                                                        event_count_df = data.frame(),
+                                                        library_size = 675){
+  method = "GSEA"
+
+  ## remove frequently affected events by knockdown
+  if (dim(event_count_df)[1] != 0){  # use pre-compiled list if it is there
+    uninformative_events <- event_count_df[event_count_df$count > library_size * overlap_ratio_threshold, ]$event
+  } else {  # calculate the count for each event and filter them
+    #  events
+    event_list <- list()
+
+    # extract all sig events in the library
+    dummy <- lapply(names(kd_library), function(experiment){
+      sig_events <- unlist(extract_GSEA_significant_events(kd_library[[experiment]]))
+      event_list[[length(event_list) + 1]] <<- sig_events
+      return()
+    })
+
+    # generate list of AS events and count for them
+    # null_event <- unique(unlist(event_list))
+    event_count_df <- as.data.frame(table(unlist(event_list)), stringsAsFactors = FALSE)
+    colnames(event_count_df) <- c("event", "count")
+
+    # define uninformative events
+    # uninformative_events <- names(null_weight)[null_weight > length(kd_library) * overlap_ratio_threshold]
+    uninformative_events <- event_count_df[event_count_df$count > length(kd_library) * overlap_ratio_threshold, ]$event
+  }
+
+  # make dataframe ready for FGSEA
+  study_mats_clean <- study_mats[, c("event", "pooled_delta_psi")]
+  study_rank <- study_mats_clean$pooled_delta_psi
+  names(study_rank) <- study_mats_clean$event
+
+  # limit the scope of kd library if given
+  if(length(library_list) > 0){
+    kd_library <- kd_library[library_list]
+  }
+
+  # calculate correlation for signature
+  test_result_df_list <- pbmcapply::pbmclapply(names(kd_library), function(signature){
+    # filter out by count
+    test_mats <- kd_library[[signature]]
+    test_mats_filtered <- subset(test_mats, !(event %in% uninformative_events))
+
+    result_df <- calculate_RBP_KD_correlation_from_mats(test_mats_filtered,  # apply this filter to here too
+                                                        study_mats,
+                                                        signature,
+                                                        study)
+
+    # calculate concordance
+    concord_result_df <- calculate_RBP_KD_concordance_from_mats(test_mats_filtered,
+                                                                study_mats,
+                                                                signature,
+                                                                study)
+
+    # merge concordance result with linear model result
+    result_df$concordance <- concord_result_df$score
+    result_df$concordance_abs <- concord_result_df$score_abs
+    result_df$concordance_pval <- concord_result_df$pval
+
+    # run GSEA analysis
+    # divide pos events and neg events for GSEA query
+    interest_event_lib_full <- SPARKS::extract_GSEA_significant_events(test_mats)
+    interest_event_lib_filtered <- SPARKS::extract_GSEA_significant_events(test_mats_filtered)
+
+    # print(signature)
+    # print(length(interest_event_lib_filtered$positive))
+    # print(length(interest_event_lib_filtered$negative))
+
+    gsea_result_full <- calculate_fgsea_score(interest_event_lib_full, study_rank)
+
+    # skip if library length is 0
+    if ((length(interest_event_lib_filtered$positive) >= 15) & (length(interest_event_lib_filtered$negative) >= 15)){
+      gsea_result_filtered <- calculate_fgsea_score(interest_event_lib_filtered, study_rank)
+      print(signature)
+      print(gsea_result_filtered)
+      # calculate rank
+      gsea_pos_score <- gsea_result_filtered$pos_score
+      gsea_neg_score <- gsea_result_filtered$neg_score
+      gsea_pos_pval <- gsea_result_filtered$pos_pval
+      gsea_neg_pval <- gsea_result_filtered$neg_pval
+
+      gsea_score <- gsea_result_filtered$score
+      gsea_score_abs <- abs(gsea_result_filtered$score)
+      gsea_combined_pval <- gsea_result_filtered$pval
+    } else {
+      # calculate rank
+      gsea_pos_score <- 0
+      gsea_neg_score <- 0
+      gsea_pos_pval <- 1
+      gsea_neg_pval <- 1
+      gsea_score <- 0
+      gsea_score_abs <- 0
+      gsea_combined_pval <- 1
     }
 
-    test_result_df <- perform_SPARKS_analysis(study_mats, kd_library_all[[spl_type]], test_study, score_method)
+    # calculate rank
+    result_df$gsea_pos_score <- gsea_pos_score
+    result_df$gsea_neg_score <- gsea_neg_score
+    result_df$gsea_pos_pval <- gsea_pos_pval
+    result_df$gsea_neg_pval <- gsea_neg_pval
+    result_df$gsea_score <- gsea_score
+    result_df$gsea_score_abs <- gsea_score_abs
+    result_df$gsea_combined_pval <- gsea_combined_pval
 
-    # store data
-    test_result_df$spl_type <- spl_type
+    # add tangential full information
+    # calculate rank
+    result_df$gsea_pos_score_full <- gsea_result_full$pos_score
+    result_df$gsea_neg_score_full <- gsea_result_full$neg_score
+    result_df$gsea_score_full <- gsea_result_full$score
+    result_df$gsea_score_abs_full <- abs(gsea_result_full$score)
+    result_df$gsea_combined_pval_full <- gsea_result_full$pval
 
-    return(test_result_df)
-  })
-  names(test_result_list) <- spl_types
-  return(test_result_list)
+    return(result_df)
+  }, mc.cores = num_cores)
+
+  # if running single-entry item, it gets weird, so handling it in two diff case
+  # - this is a known bug in pbmcapply - issue #50
+  # - we are doing "catch" approach for possible user env variations
+  if (length(test_result_df_list$value) == 0) {  # this is the expected behavior
+    test_result_df <- do.call(rbind, test_result_df_list)
+  } else if (length(test_result_df_list$value) > 1) {  # this sometims happens because of warnings
+    test_result_df <- do.call(rbind, test_result_df_list$value)
+  } else {  # if single? need to be tested
+    test_result_df <- test_result_df_list$value[[1]]
+  }
+
+  ### calculate RANK for downstream analysis
+  if (method == "GSEA"){
+    test_result_df$rank <- rank(-test_result_df$gsea_score_abs)
+    test_result_df$plot_score <- test_result_df$gsea_score_abs
+  } else if (method == "Pearson"){
+    test_result_df$rank <- rank(-test_result_df$score_abs)
+    test_result_df$plot_score <- test_result_df$score_abs
+  } else if (method == "Kendall"){
+    test_result_df$rank <- rank(-test_result_df$concordance_abs)
+    test_result_df$plot_score <- test_result_df$concordance_abs
+  }
+
+  # add the frequency cutoff to reduce confusion downstream
+  test_result_df$frequency_cutoff <- overlap_ratio_threshold
+  return(test_result_df)
 }
 
 
+
+#' Add SPAKRS result for single AS signature
+#'
+#' @param input_mats MATS df for the study of interest
+#' @param input_result SPARKS analysis result against AS signature library
+#' @param test_mats MATS df for the signature
+#' @param test_study signature name
+#' @param kd_library If given, this entire library will be used to compute the AS events fo filter out
+#' @param event_count_df If given, this list will be used to compute the AS events fo filter out. This is more memory-efficient
+#' @param library_size This is 675 for now. Don't change
+#'
+#' @return SPARKS analysis result with new result added
 #' @export
-generate_SPARKS_top10_plots <- function(test_result_list){
+add_custom_library_to_SPARKS_test_result <- function(input_mats,
+                                                     input_result,
+                                                     test_mats,
+                                                     test_study,
+                                                     kd_library = list(),
+                                                     event_count_df = data.frame(),
+                                                     library_size = 675){
 
-  spl_types <- c("SE", "A3SS", "A5SS", "RI")
-  ### generate plot data
-  # subset top 10
+  # remove spl type if there is one just in case
+  if ("spl_type" %in% colnames(input_result)){
+    input_result$spl_type <- NULL
+  }
 
-  test_plot_list <- lapply(spl_types, function(spl_type) {
-    test_result_df <- test_result_list[[spl_type]]
-    test_top10_result_df <- subset(test_result_df, rank <= 10)
+  # remove GSEA rank if it is already there - as this will need to be recalculated
+  if ("gsea_rank" %in% colnames(input_result)){
+    input_result$gsea_rank <- NULL
+  }
 
-    test_top10_result_df$S1 <- factor(test_top10_result_df$S1,
-                                      level = test_top10_result_df$S1[order(test_top10_result_df$rank)])
-    p <- ggplot(test_top10_result_df,
-                aes(x = rank,
-                    y = plot_score)) +
-      geom_point() +
-      ggrepel::geom_label_repel(data = subset(test_top10_result_df, rank < 6),
-                                hjust = -0.1, vjust = -0.1, aes(label = S1)) +
-      labs(x = 'Rank based on Correlation Score from ENCODE RBP KD \n(Sorted by score)',
-           y = "Correlation Score",
-           subtitle = sprintf("Top 10 RBP KD experiments based on Correlation Score\nSplicing Type: %s", spl_type)) +
-      scale_x_continuous(breaks = seq(10))
-    return(p)
-  })
-  return(test_plot_list)
+  if ((dim(event_count_df)[1] == 0) & (length(kd_library) > 0)){  # if event count is not given, update the whole library
+    # add the entry to library
+    added_library <- kd_library
+    added_library[[test_study]] <- test_mats
+  } else if ((dim(event_count_df)[1] >= 0) & (length(kd_library) == 0)) {  # if event count is given, skip the library step
+    added_library <- list()
+    added_library[[test_study]] <- test_mats
+  } else {  # if neither or both is given - it is unclear so stop
+    stop("Library input/count is missing or both present. Please check your parameter")
+  }
+
+  # run the new analysis only on the new entry
+  new_test_result <- perform_SPARKS_analysis_with_overlap_filter(input_mats,
+                                                                 added_library,
+                                                                 study = unique(input_result$S2)[1],  # this should be one entry
+                                                                 library_list = c(test_study),
+                                                                 num_cores = 1,
+                                                                 event_count_df = event_count_df,
+                                                                 library_size = 675)
+  # combine the new result
+  combined_test_result <- rbind(input_result, new_test_result)
+
+  # calculate the rank again
+  combined_test_result$gsea_rank <- rank(-combined_test_result$gsea_score)
+
+  return(combined_test_result)
 }
 
 
+
+##### SUBSET FUNCTIONS #####
+
+#' Calculate new MATS df for subset of samples
+#'
+#' The sample column ID can be identified by PSI df stored in SPARKS object
+#'
+#' @param study_mats Filtered MATS df
+#' @param comp_sample_id_1 Column ID for group one.
+#' @param comp_sample_id_2 Column ID for group two
+#' @param count_threshold Average read count for AS events. Events with read counts below this number in average is removed
+#' @param min_threshold Minimum read count for AS events. Events with read counts below this number in any sample is removed
+#'
+#' @return subset_mats_df Filtered MATS df for the subset of the samples
 #' @export
-generate_SPARKS_sorted_barplot_with_highlight <- function(test_result_list, spl_type, rbp_of_interest){
-
-  # extract relevant score
-  # TODO - score scheme should be adaptable to different method
-  test_result_df <- test_result_list[[spl_type]]
-  test_result_df$plot_scores <- test_result_df$gsea_score
-
-  # sort by plot score
-  test_result_df$S1 <- factor(test_result_df$S1, levels = test_result_df[order(test_result_df$plot_scores), ]$S1)
-
-  # annotate RBP and flag for highlight
-  test_result_df$RBP <- unlist(lapply(as.character(test_result_df$S1), function(x) strsplit(x, "_")[[1]][2]))
-  test_result_df$interest <- ifelse(test_result_df$RBP %in% c(rbp_of_interest), "interest", NA)
-
-  # generate plot
-  p <- ggplot(test_result_df, aes(x = S1, y = plot_scores, fill = interest)) +
-    geom_bar(stat = 'identity', width = 1) +
-    ggrepel::geom_label_repel(data = subset(test_result_df, interest == "interest"),
-                              aes(label = S1),
-                              vjust = 1, hjust = -0.1,
-                              min.segment.length = 0) +
-    scale_fill_manual(values = list('interest' = "indianred3"),
-                      na.value = 'grey75') +
-    theme(axis.text.x = element_blank(),
-          axis.ticks.x = element_blank(),
-          legend.position = "none") +
-    labs(y = "Correlation Score",
-         x = "ENCODE RBP KD/KO experiments\n(Sorted by Correlation Score)")
-  return(p)
-}
-
-
-#' @export
-## Subset data if necessary
-calculate_new_psi_for_subset_of_samples <- function(study_mats, comp_sample_id_1, comp_sample_id_2, count_threshold = 20){
+calculate_new_psi_for_subset_of_samples <- function(study_mats,
+                                                    comp_sample_id_1,
+                                                    comp_sample_id_2,
+                                                    count_threshold = 20,
+                                                    min_threshold = 20){
 
   # make copy to update the values
   study_mats_temp <- study_mats
@@ -191,39 +476,35 @@ calculate_new_psi_for_subset_of_samples <- function(study_mats, comp_sample_id_1
   comp_skip <- (comp_factor / (1 + comp_factor)) * comp_count
   comp_inc <- (1 / (1 + comp_factor)) * comp_count
 
-
-  # comp_inc <- comp_psi * comp_count * 2 / (1 + comp_psi)
-  # comp_skip <- comp_count - comp_inc
-
-  # # calculate loss
-  # comp_psi_new = (comp_inc / 2) / ((comp_inc / 2) + comp_skip)
-  # max(comp_psi - comp_psi_new, na.rm = T)
-
-  # calculate new pulled count and PSI
+  # calculate new pooled count and PSI
   comp_inc_group_1 <- rowSums(comp_inc[, seq(1, length(comp_sample_id_1)), drop = FALSE], na.rm = T)
   comp_inc_group_2 <- rowSums(comp_inc[, seq(length(comp_sample_id_1) + 1, length(comp_sample_id_1) + length(comp_sample_id_2)), drop = FALSE], na.rm = T)
   comp_skip_group_1 <- rowSums(comp_skip[, seq(1, length(comp_sample_id_1)), drop = FALSE], na.rm = T)
   comp_skip_group_2 <- rowSums(comp_skip[, seq(length(comp_sample_id_1) + 1, length(comp_sample_id_1) + length(comp_sample_id_2)), drop = FALSE], na.rm = T)
 
-  pulled_psi_group_1 <- (comp_inc_group_1 / 2) / ((comp_inc_group_1 / 2) + comp_skip_group_1)
-  pulled_psi_group_2 <- (comp_inc_group_2 / 2) / ((comp_inc_group_2 / 2) + comp_skip_group_2)
+  pooled_psi_group_1 <- (comp_inc_group_1 / 2) / ((comp_inc_group_1 / 2) + comp_skip_group_1)
+  pooled_psi_group_2 <- (comp_inc_group_2 / 2) / ((comp_inc_group_2 / 2) + comp_skip_group_2)
 
   # update the values to new mats dir
   study_mats_temp$psi_values <- unlist(apply(comp_psi, 1, function(x) paste0(x, collapse=",")))
   study_mats_temp$count_values <- unlist(apply(comp_count, 1, function(x) paste0(x, collapse=",")))
 
+  # calculate average counts
   study_mats_temp$avg_count <- rowMeans(comp_count)
 
-  study_mats_temp$pulled_psi_1 <- pulled_psi_group_1
-  study_mats_temp$pulled_psi_2 <- pulled_psi_group_2
+  # calculate pooled PSI
+  study_mats_temp$pooled_psi_1 <- pooled_psi_group_1
+  study_mats_temp$pooled_psi_2 <- pooled_psi_group_2
 
-  study_mats_temp$pulled_delta_psi <- pulled_psi_group_1 - pulled_psi_group_2
-  study_mats_temp$beta <- pulled_psi_group_1 - pulled_psi_group_2
+  # calculate delta PSI and update the beta columns
+  study_mats_temp$pooled_delta_psi <- pooled_psi_group_1 - pooled_psi_group_2
+  study_mats_temp$beta <- pooled_psi_group_1 - pooled_psi_group_2
 
   # drop NA rows
   study_mats_compelte <- study_mats_temp[rowSums(is.na(study_mats_temp)) == 0, ]
 
-  study_mats_temp$pulled_pval <- unlist(lapply(seq(dim(study_mats_temp)[1]), function(idx) {
+  # compute pooled pval
+  study_mats_temp$pooled_pval <- unlist(lapply(seq(dim(study_mats_temp)[1]), function(idx) {
     inc1 <- (comp_inc_group_1)[idx]
     inc2 <- (comp_inc_group_2)[idx]
     total1 <- (comp_inc_group_1 + comp_skip_group_1)[idx]
@@ -241,404 +522,101 @@ calculate_new_psi_for_subset_of_samples <- function(study_mats, comp_sample_id_1
   # filter by count
   study_mats_clean <- subset(study_mats_temp, avg_count >= count_threshold )
 
-  study_mats_clean$pval <- study_mats_clean$pulled_pval
+  study_mats_clean$pval <- study_mats_clean$pooled_pval
   study_mats_clean$fdr <- p.adjust(study_mats_clean$pval, method = "BH")
-  return(study_mats_clean)
+
+  # calculate minimum_count
+  study_mats_clean$min_count <- unlist(lapply(study_mats_clean$count_values,
+                                              function(input_counts) min(do.call(as.numeric, strsplit(input_counts, ",")))))
+
+  study_mats_temp <- subset(study_mats_clean, avg_count >= count_threshold & min_count >= min_threshold) %>% arrange(-beta)
+  return(study_mats_temp)
 }
 
 
 
 
+#' Subset SPARKS object for subsets
+#'
+#' @param input_sparks Input SPARKS object
+#' @param kd_library_all Signature library for all splice type
+#' @param subset_study Study name for this subset comparison
+#' @param sample_one_id Column ID for group one.
+#' @param sample_two_id Column ID for group two.
+#' @param num_cores Number of cores for SPARKS analysis
+#' @param overlap_ratio_threshold Threshold to filter out AS events based on their occurrences in the library - default = 30%
+#'
+#' @return subset_SPARKS_object
 #' @export
-generate_SPARKS_strip_plot_with_highlight <- function(test_result_list, spl_type, rbp_of_interest){
-
-  # extract relevant score
-  # TODO - score scheme should be adaptable to different method
-  test_result_df <- test_result_list[[spl_type]]
-
-  # sort by plot score
-  test_result_df$plot_scores <- test_result_df$gsea_score
-  test_result_df$S1 <- factor(test_result_df$S1, levels = test_result_df[order(test_result_df$plot_scores), ]$S1)
-  test_result_df$plot_rank <- rank(-test_result_df$plot_scores)
-
-  # annotate RBP and flag for highlight
-  test_result_df$RBP <- unlist(lapply(as.character(test_result_df$S1), function(x) strsplit(x, "_")[[1]][2]))
-  test_result_df$interest <- ifelse(test_result_df$RBP %in% c(rbp_of_interest), "interest", NA)
-  test_result_df[!is.na(test_result_df$interest), ]$plot_scores <- NA  # Using NA to for manual setting
-
-  # set names for ranking
-  test_result_df$annotation <- unlist(apply(test_result_df, 1, function(x) {
-    S1 <- x["S1"]
-    plot_rank <- round(as.numeric(x["plot_rank"]))
-    sprintf("%s - %s %s %s",
-            plot_rank,
-            strsplit(as.character(S1), "_")[[1]][1],
-            strsplit(as.character(S1), "_")[[1]][2],
-            strsplit(as.character(S1), "_")[[1]][3])
-  }))
-
-
-
-  # generate plot
-  p <- ggplot(test_result_df, aes(y = S1)) +
-    geom_tile(aes(x = 0.05,
-                  fill = plot_scores),
-              width = 0.1) +
-    scale_fill_distiller(palette = "PiYG", limits = c(-max(abs(test_result_df$gsea_score)),
-                                                      max(abs(test_result_df$gsea_score))),
-                         na.value = "black")  +
-    scale_x_continuous(expand = c(0, 0), limits = c(0, 0.3)) +
-    scale_y_discrete(expand = c(0, 0)) +
-    ggrepel::geom_label_repel(data = subset(test_result_df, interest == "interest"),
-                              aes(x = 0.1 - 0.000005, # this is to remove slight disconnect between the bar and label line
-                                  label = annotation,
-                                  fill = gsea_score),
-                              # vjust = 1,
-                              # hjust = 0.5,
-                              min.segment.length = 0,
-                              nudge_y = -20,
-                              nudge_x = 0.05,
-                              force = 10,
-                              xlim = c(0.1, 0.3),
-                              ylim = c(5, dim(test_result_df)[1] - 5),
-                              label.r = 0,
-                              label.padding = 0.3,
-                              family = "Arial",
-                              label.size = NA,
-                              size = 3) +
-    theme(axis.text = element_blank(),
-          axis.ticks = element_blank(),
-          legend.position = "none",
-          legend.direction = "vertical",
-          axis.title = element_blank()) +
-    labs(x = "Enrichment Score\nFrom the Library",
-         y = spl_type)
-
-  return(p)
-}
-
-#' @export
-generate_splicing_summary_plot <- function(study_mats_list){
-
-  test_sig_df  <- do.call(rbind, lapply(names(study_mats_list), function(spl_type){
-    test_mats <- study_mats_list[[spl_type]]
-    test_sig_subset <- subset(test_mats, abs(beta) > 0.1)
-    test_sig_subset$spl_type <- spl_type
-
-    return(test_sig_subset)
-  }))
-
-
-  test_sig_count_df  <- data.frame(table(data.frame(ifelse(test_sig_df $beta > 0, "pos", "neg"), test_sig_df $spl_type)))
-  colnames(test_sig_count_df ) <- c("direction", "spl_type", "freq")
-  test_sig_count_df $loc <- ifelse(test_sig_count_df $direction == "neg", max(test_sig_df $beta) + 0.1, min(test_sig_df $beta) - 0.1)
-
-  p <- ggplot(test_sig_df) +
-    geom_violin(aes(x = spl_type, fill = ifelse(beta > 0, "pos", "neg"),
-                    y = beta * -1), scale = "width" ) +
-    # geom_jitter(alpha = 0.1)
-    geom_point(aes(x = spl_type, fill = ifelse(beta > 0, "pos", "neg"),
-                   y = beta* -1),
-               position=position_jitterdodge(), alpha = 0.1) +
-    geom_label(data = test_sig_count_df , aes(label = freq, x = spl_type, y = loc, color = direction), fill = "white") +
-    labs(x = "Splicing Type",
-         y = "Percent Spliced In") +
-    theme(legend.position = "none")
-  return(p)
-}
-
-
-#' @export
-prepare_library_data_for_splicing_summary_plot <- function(kd_library_all, study){
-
-  output_list <- list()
-  spl_types <- c("SE", "A3SS", "A5SS", "RI")
-
-  dummy <- lapply(spl_types, function(spl_type){
-    study_mats <- kd_library_all[[spl_type]][[study]]
-    output_list[[spl_type]] <<- study_mats
-  })
-  return(output_list)
-}
-
-#' @export
-add_custom_study_to_library <- function(kd_library_all,
-                                        input_file,
-                                        input_study,
-                                        subset_group_1 = c(),
-                                        subset_group_2 = c()){
-  # read SPARKS data
-  input_start <- readRDS(input_file)
-
-  spl_types <- c("SE", "A3SS", "A5SS")
-
-  dummy <- lapply(spl_types, function(spl_type){
-    print(sprintf("Importing %s for %s",spl_type, input_study))
-
-    input_mats_filtered <- import_SPARKS_MATS_for_analysis(input_start, spl_type = spl_type, count_threshold = 20)
-
-    # subset option if input necessitates it
-    if (length(subset_group_1) > 0 | length(subset_group_2) > 0){  # if subset option is used
-      # validate the length for both
-      if (length(subset_group_1) == 0 | length(subset_group_2) == 0){  # if one group is not specified
-        stop("One of the subset group is undefined - please check your input")
-      }
-      # perform subset operation
-      input_mats_filtered <- calculate_new_psi_for_subset_of_samples(input_mats_filtered,
-                                                                     subset_group_1,
-                                                                     subset_group_2)
-    }
-
-    input_mats_sorted <- input_mats_filtered[rev(order(input_mats_filtered$beta)), ]
-
-
-    concordant_mats <- subset(input_mats_sorted, abs(beta - pulled_delta_psi) < 0.1)
-
-    # change beta
-    concordant_mats$mean_beta <- concordant_mats$beta
-    concordant_mats$beta <- concordant_mats$pulled_delta_psi
-
-
-    kd_library_all[[spl_type]][[input_study]] <<- concordant_mats
-    # discordant_mats_list[[study]] <<- discordant_mats
-    return()
-  })
-
-  return(kd_library_all)
-}
-
-#' @export
-import_custom_study_as_SPARKS_library <- function(input_SPARKS_file,
-                                                  input_study,
-                                                  subset_group_1 = c(),
-                                                  subset_group_2 = c()){
-  # read SPARKS data
-  input_start <- readRDS(input_SPARKS_file)
-
-  spl_types <- c("SE", "A3SS", "A5SS")
-
-  concordant_mats_list <- list()
-
-  # make slots
-  concordant_mats_list[['SE']] <- list()
-  concordant_mats_list[['A3SS']] <- list()
-  concordant_mats_list[['A5SS']] <- list()
-
-
-  dummy <- lapply(spl_types, function(spl_type){
-    print(sprintf("Importing %s for %s", spl_type, input_study))
-
-    input_mats_filtered <- import_SPARKS_MATS_for_analysis(input_start, spl_type = spl_type, count_threshold = 20)
-
-    # subset option if input necessitates it
-    if (length(subset_group_1) > 0 | length(subset_group_2) > 0){  # if subset option is used
-      # validate the length for both
-      if (length(subset_group_1) == 0 | length(subset_group_2) == 0){  # if one group is not specified
-        stop("One of the subset group is undefined - please check your input")
-      }
-      # perform subset operation
-      input_mats_filtered <- calculate_new_psi_for_subset_of_samples(input_mats_filtered,
-                                                                     subset_group_1,
-                                                                     subset_group_2)
-    }
-
-    input_mats_sorted <- input_mats_filtered[rev(order(input_mats_filtered$beta)), ]
-
-
-    concordant_mats <- subset(input_mats_sorted, abs(beta - pulled_delta_psi) < 0.1)
-
-    # change beta
-    concordant_mats$mean_beta <- concordant_mats$beta
-    concordant_mats$beta <- concordant_mats$pulled_delta_psi
-
-
-    concordant_mats_list[[spl_type]][[input_study]] <<- concordant_mats
-    # discordant_mats_list[[study]] <<- discordant_mats
-    return()
-  })
-
-  return(concordant_mats_list)
-}
-
-#' @export
-generate_SPARKS_result_with_custom_library_results <- function(input_sparks,
-                                                               custom_test_result){
-
-  input_test_result <- input_sparks@SPARKS_analysis_result
-  combined_test_result <- add_custom_library_result_to_SPARKS_result(input_test_result,
-                                                                     custom_test_result)
-  return(combined_test_result)
-}
-
-#' @export
-add_custom_library_result_to_SPARKS_result <- function(input_test_result,
-                                                       custom_test_result){
-  # add this to the original library data
-  combined_test_result <- list()
-  dummy <- lapply(spl_types, function(spl_type){
-    # load result for each type
-    custom_test_result_spl_type <- custom_test_result[[spl_type]]
-    original_test_result_spl_type <- input_test_result[[spl_type]]
-
-    # combine the result
-    combined_result_spl_type <- rbind(custom_test_result_spl_type,
-                                      original_test_result_spl_type)
-
-    # recalculate rank
-    combined_result_spl_type$rank <- ceiling(rank(-combined_result_spl_type$gsea_score))  # TODO - change this code for other methods?
-
-    # update the dataframe
-    combined_test_result[[spl_type]] <<- combined_result_spl_type
-    return()
-  })
-  return(combined_test_result)
-}
-
-#' @export
-merge_custom_SPARKS_libraries <- function(custom_library_list){
-
-  # read SPARKS data
-  spl_types <- c("SE", "A3SS", "A5SS")
-
-  merged_mats_list <- list()
-
-  # make slots
-  merged_mats_list[['SE']] <- list()
-  merged_mats_list[['A3SS']] <- list()
-  merged_mats_list[['A5SS']] <- list()
-
-  input_study_list <- unlist(lapply(custom_library_list, function(x) names(x[['SE']])))
-
-  dummy <- lapply(spl_types, function(spl_type){
-    dummy2 <- lapply(seq(length(custom_library_list)), function(idx){  # access by index for easier processing
-      input_study <- input_study_list[idx]
-      print(sprintf("Merging %s for %s", spl_type, input_study))
-
-      # access the correct study mats
-      library_mats <- custom_library_list[[idx]][[spl_type]][[input_study]]
-
-      merged_mats_list[[spl_type]][[input_study]] <<- library_mats
-
-      return()
-    })
-    return()
-  })
-
-  return(merged_mats_list)
-}
-
-
-
-#' @export
-append_SPARKS_mats_for_all_splice_type <- function(mats_list,
-                                                   input_start,
-                                                   input_study){
-  # make the slot for input
-  mats_list[[input_study]] <- list()
-
-  dummy <- lapply(spl_types, function(spl_type){
-    input_study_mats <- import_SPARKS_MATS_for_analysis(input_start, spl_type)
-
-    # append the result for downstream analysis
-    mats_list[[input_study]][[spl_type]] <<- input_study_mats
-  })
-
-  return(mats_list)
-}
-
-
-#' @export
-append_SPARKS_result_for_all_splice_type <- function(result_list,
-                                                     input_start,
-                                                     input_study){
-  # make the slot for input
-  result_list[[input_study]] <- list()
-
-  input_result_list <- input_start@SPARKS_analysis_result
-
-  # append the result for downstream analysis
-  result_list[[input_study]] <- input_result_list
-
-
-  return(result_list)
-}
-
-
-
-#' @export
-append_SPARKS_expression <- function(expression_list,
-                                     input_start,
-                                     input_study){
-  # make the slot for input
-  expression_list[[input_study]] <- list()
-
-  input_expression_list <- input_start@exp_df
-
-  # append the expression for downstream analysis
-  expression_list[[input_study]] <- input_expression_list
-
-
-  return(expression_list)
-}
-
-
-
-#' @export
-generate_subset_SPARKS <- function(input_start,
-                                   kd_library_all,
-                                   subset_study,
-                                   sample_one_id,
-                                   sample_two_id){
+generate_subset_SPARKS_rerun <- function(input_sparks,
+                                         kd_library_all,
+                                         subset_study,
+                                         sample_one_id,
+                                         sample_two_id,
+                                         num_cores = 3,
+                                         overlap_ratio_threshold = 0.30){
   # make copy
-  subset_start <- input_start
+  subset_sparks <- input_sparks
 
   # identify the index for the sample for the subset
-  sample_idx_one <- which(startsWith(rownames(input_start@sample_chart), sample_one_id))
-  sample_idx_two <- which(startsWith(rownames(input_start@sample_chart), sample_two_id))
+  sample_idx_one <- sample_one_id
+  sample_idx_two <- sample_two_id
 
+  spl_types <- c("SE", "A3SS", "A5SS")
   # subset the PSI values
   dummy <- lapply(spl_types, function(spl_type){
     print(sprintf("Subsetting PSI df for %s", spl_type))
-    full_psi_df <- input_start@psi_df[[spl_type]]
+    full_psi_df <- input_sparks@psi_df[[spl_type]]
     subset_psi_df <- full_psi_df[, c(sample_idx_one, sample_idx_two)]
     # append the result for downstream analysis
-    subset_start@psi_df[[spl_type]] <<- subset_psi_df
+    subset_sparks@psi_df[[spl_type]] <<- subset_psi_df
     return()
   })
 
   # subset the MATS
   dummy <- lapply(spl_types, function(spl_type){
     print(sprintf("Subsetting MATS df for %s", spl_type))
-
-    full_mats_df <- import_SPARKS_MATS_for_analysis(input_start, spl_type)
+    # TODO - this has been checkd only for SE - generalize
+    full_mats_df <- import_SPARKS_MATS_for_analysis(input_sparks, spl_type)
     subset_mats_df <- calculate_new_psi_for_subset_of_samples(full_mats_df,
                                                               sample_idx_one,
                                                               sample_idx_two)
+    subset_mats_filtered <- subset_mats_df[rowSums(is.na(subset_mats_df)) == 0, ] %>% arrange(-beta)
+    print(head(subset_mats_filtered))
+    # subset_mats_filtered <- subset_mats_filtered[rev(order(subset_mats_filtered$beta)), ]
     # append the result for downstream analysis
-    subset_start@MATS_list[[spl_type]] <<- subset_mats_df
+    subset_sparks@MATS_list[[spl_type]] <<- subset_mats_filtered
   })
 
   print("Performing SPARKS Analysis for the subset")
 
-  # update SPARKS analysis result
-  subset_sparks_result <- perform_SPARKS_analysis_for_all_splice_types(subset_start,
-                                                                       kd_library_all,
-                                                                       subset_study)
-  subset_start@SPARKS_analysis_result <- subset_sparks_result
+  # update SPARKS analysis result - TODO - generalize?
+  # subset_sparks_result <- perform_SPARKS_analysis_for_all_splice_types(subset_sparks,
+  #                                                                      kd_library_all,
+  #                                                                      subset_study)
+  # subset_sparks@SPARKS_analysis_result <- subset_sparks_result
 
-  print("Subsetting Expression df for the subset")
-  # subset the expression values
-  # calculate new index, as this may be different since it was randomized in python process
-  full_exp_df <- input_start@exp_df
-  exp_sample_idx_one <- which(startsWith(colnames(full_exp_df), sample_one_id))
-  exp_sample_idx_two <- which(startsWith(colnames(full_exp_df), sample_two_id))
+  subset_sparks_result_SE <- perform_SPARKS_analysis_with_overlap_filter(subset_sparks@MATS_list$SE,
+                                                                         kd_library_all,
+                                                                         study = subset_study,
+                                                                         num_cores = num_cores,
+                                                                         overlap_ratio_threshold = overlap_ratio_threshold)
+  subset_sparks@SPARKS_analysis_result$SE <- subset_sparks_result_SE
 
-  subset_exp_df <- full_exp_df[, c(exp_sample_idx_one, exp_sample_idx_two)]
-  # append the result for downstream analysis
-  subset_start@exp_df <- subset_exp_df
+  # print("Subsetting Expression df for the subset")
+  # # subset the expression values
+  # # calculate new index, as this may be different since it was randomized in python process
+  # full_exp_df <- input_sparks@exp_df
+  # exp_sample_idx_one <- which(startsWith(colnames(full_exp_df), sample_one_id))
+  # exp_sample_idx_two <- which(startsWith(colnames(full_exp_df), sample_two_id))
+
+  # subset_exp_df <- full_exp_df[, c(exp_sample_idx_one, exp_sample_idx_two)]
+  # # append the result for downstream analysis
+  # subset_sparks@exp_df <- subset_exp_df
 
   # update study
-  subset_start@study <- subset_study
+  subset_sparks@study <- subset_study
 
-  return(subset_start)
+  return(subset_sparks)
 }
+

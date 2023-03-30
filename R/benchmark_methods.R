@@ -1,5 +1,4 @@
 ###### FUNCTIONS  #####
-#' @export
 calculate_RBP_KD_correlation_from_mats <- function(kd_mats_df,
                                                    study_sig_df,
                                                    study_1,
@@ -77,6 +76,7 @@ calculate_RBP_KD_correlation_from_mats <- function(kd_mats_df,
 
   # calculate score
   score <- rsq * num_eff / num_total
+  if(is.na(score)){ score <- 0}  # fill 0 if score is NaN, which is possible by 0 div
   score_abs <- abs(score)
 
 
@@ -179,7 +179,6 @@ calculate_RBP_KD_correlation_from_mats <- function(kd_mats_df,
 
 
 
-#' @export
 calculate_RBP_KD_correlation_from_mats_fdr <- function(kd_mats_df,
                                                        study_sig_df,
                                                        study_1,
@@ -362,7 +361,6 @@ calculate_RBP_KD_correlation_from_mats_fdr <- function(kd_mats_df,
 
 
 # permute PSI df and calculate score
-#' @export
 calculate_permuted_score_from_psi_df <- function(delta_psi_df,
                                                  beta_threshold = 0.1,
                                                  num_permutation = 100,
@@ -439,7 +437,6 @@ calculate_permuted_score_from_psi_df <- function(delta_psi_df,
 
 
 
-#' @export
 calculate_RBP_KD_concordance_from_mats <- function(kd_mats_df,
                                                    study_sig_df,
                                                    study_1,
@@ -486,8 +483,19 @@ calculate_RBP_KD_concordance_from_mats <- function(kd_mats_df,
 
   # calculate score
   score <- num_eff / num_total
+  if(is.na(score)) {score <- 0}
   score_abs <- abs(score)
 
+  # calculate p-value
+  sign_df <- ifelse(abs(delta_psi_df) < beta_threshold,
+                    0, ifelse(delta_psi_df > 0, 1, -1))
+
+  tryCatch({
+    p_value <- cor.test(sign_df[, 1], sign_df[, 2], method = "kendall")$p.value
+  },
+  error = function(e){
+    p_value <<- 1
+  })
   result_df <- data.frame(S1 = study_1,
                           S2 = study_2,
                           num_common_events = num_complete,
@@ -504,15 +512,12 @@ calculate_RBP_KD_concordance_from_mats <- function(kd_mats_df,
                           num_eff = num_eff,
                           num_total_sig = num_total,
                           score = score,
-                          score_abs = score_abs)
-  # sig events in each RBP
-  # sig events common
-  # corr
-  # corr stat
+                          score_abs = score_abs,
+                          pval = p_value)
+
   return(result_df)
 }
 
-#' @export
 calculate_RBP_KD_concordance_from_mats_fdr <- function(kd_mats_df,
                                                        study_sig_df,
                                                        study_1,
@@ -587,7 +592,6 @@ calculate_RBP_KD_concordance_from_mats_fdr <- function(kd_mats_df,
 }
 
 
-#' @export
 GSEA.EnrichmentScore <-
   function(gene.list, gene.set, weighted.score.type = 1, correl.vector = NULL) {
 
@@ -644,7 +648,6 @@ calculate_GSEA_score <- function(input_signature_list, test_pos_events, test_neg
 }
 
 
-#' @export
 calculate_pulled_binomial_pval <- function(psi_1,
                                            psi_2,
                                            total_count_1,
@@ -658,7 +661,6 @@ calculate_pulled_binomial_pval <- function(psi_1,
 
 
 # pseudo binomial pval
-#' @export
 calculate_pulled_binomial_pval_for_mats <- function(input_mats_df) {
   pval_list <- unlist(apply(input_mats_df, 1, function(x){
 
