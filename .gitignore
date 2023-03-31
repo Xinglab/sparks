@@ -105,3 +105,10 @@ aux_scripts/filter_minimum_count_for_library.R
 aux_scripts/wrapper_for_start_to_sparks_rerun
 aux_scripts/wrapper_for_start_to_sparks_rerun
 figures/S34F.ai
+example/MCF7_SRSF1_shRNA/MCF7_SRSF1_shRNA.SPARKS.rds
+example/EMT/data/LNCaP_ESRP12_siRNA.SPARKS.rds
+example/EMT/data/H358_ZEB1_OE.SPARKS.rds
+example/EMT/data/H358_ESRP12_siRNA.SPARKS.rds
+aux_scripts/wrapper_for_start_to_sparks_rerun
+example/EMT/data/HCC827_ZEB1_OE.SPARKS.rds
+library/SPARKS.ENCODE_signatures.library.rds
