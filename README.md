@@ -11,11 +11,10 @@
 - [Dependencies](#dependencies)
 - [Install](#install)
 - [Snakemake pipeline for data processing](#Snakemake-pipeline-for-data-processing)
+- [Shiny-app](#shiny-app)
 - [Usage](#usage)
 * [Examples](#examples)
-* [FAQ](#faq)
-* [All arguments](#all-arguments)
-- [Output](#output)
+* [rMATS output processing](#rMATS-output-processing)
 - [Contacts and bug reports](#contacts-and-bug-reports)
 - [Copyright and License Information](#copyright-and-license-information)
 
