@@ -25,7 +25,6 @@ Snakemake workflow for SPARKS
 * The main output file is `{cancer_type}.SPARKS.rds`
 * Other output files are in:
   + bam/
-  + CLIP/
   + expression/
   + rmats/
   + rMATS_matrix/
