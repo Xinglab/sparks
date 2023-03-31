@@ -2,7 +2,7 @@
 title: "MCF7 SRSF1 Example"
 author: "Harry Taegyun Yang"
 date: "`r Sys.Date()`"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
