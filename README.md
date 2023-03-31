@@ -135,8 +135,8 @@ Please note that RBP perturbation experiments with SRSF1 KD are noted in red tex
 ### Examples
 
 Detailed examples on SPARKS analysis can be found below. The data for the examples below can be found [here](https://zenodo.org/record/7789657#.ZCc_8ezMITt). 
-- [Basic SPARKS analysis on MCF7 SRSF1 KD data](example/MCF7_SRSF1_shRNA/MCF7_SRSF1_shRNA.SPARKS_example.html).
-- [ESRP and ZEB1 analysis in EMT](example/EMT/EMT_analysis.html). This analysis demonstrates how you can add custom public RBP perturbation datasets into your SPARKS analysis. It also shows how you can utilize the expression values quantified by the Snakemake processing pipeline.
+- [Basic SPARKS analysis on MCF7 SRSF1 KD data](example/MCF7_SRSF1_shRNA/MCF7_SRSF1_shRNA.SPARKS_example.md).
+- [ESRP and ZEB1 analysis in EMT](example/EMT/EMT_analysis.md). This analysis demonstrates how you can add custom public RBP perturbation datasets into your SPARKS analysis. It also shows how you can utilize the expression values quantified by the Snakemake processing pipeline.
 
 ### rMATS output processing 
 
