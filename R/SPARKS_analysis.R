@@ -443,7 +443,7 @@ add_custom_library_to_SPARKS_test_result <- function(input_mats,
 
 
 
-#' Title
+#' Wrapper for running SPARKS for all splice types
 #'
 #' @param input_sparks Input SPARKS object
 #' @param kd_library_all Signature library for all splice types
