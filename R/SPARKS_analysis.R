@@ -443,6 +443,37 @@ add_custom_library_to_SPARKS_test_result <- function(input_mats,
 
 
 
+#' Title
+#'
+#' @param input_sparks Input SPARKS object
+#' @param kd_library_all Signature library for all splice types
+#' @param test_study Study name
+#'
+#' @return SPARKS analysis results for all splice types bound in a list
+#' @export
+perform_SPARKS_analysis_for_all_splice_types <- function(input_sparks,
+                                                         kd_library_all,
+                                                         test_study = "",
+                                                         subset_group_1 = c(),
+                                                         subset_group_2 = c()){
+
+  spl_types <- c("SE", "A3SS", "A5SS")
+  test_result_list <- lapply(spl_types, function(spl_type) {
+    print(sprintf("Running SPARKS analysis on %s", spl_type))
+
+    # filter raw data
+    study_mats <- import_SPARKS_MATS_for_analysis(input_sparks, spl_type)
+
+    test_result_df <- perform_SPARKS_analysis_with_overlap_filter(study_mats, kd_library_all[[spl_type]], test_study)
+
+    return(test_result_df)
+  })
+  names(test_result_list) <- spl_types
+  return(test_result_list)
+}
+
+
+
 ##### SUBSET FUNCTIONS #####
 
 #' Calculate new MATS df for subset of samples
@@ -619,4 +650,6 @@ generate_subset_SPARKS_rerun <- function(input_sparks,
 
   return(subset_sparks)
 }
+
+
 
