@@ -200,7 +200,7 @@ import_SPARKS_MATS_for_analysis <- function(input_sparks,
     study_mats_known <- input_sparks@MATS_list[[spl_type]]
   }
 
-  study_mats_known$beta <- study_mats_known$pooled_delta_psi
+  study_mats_known$beta <- as.numeric(study_mats_known$pooled_delta_psi)
 
   # calculate minimum_count
   study_mats_known$min_count <- unlist(lapply(study_mats_known$count_values,
