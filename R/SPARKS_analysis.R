@@ -200,7 +200,12 @@ import_SPARKS_MATS_for_analysis <- function(input_sparks,
     study_mats_known <- input_sparks@MATS_list[[spl_type]]
   }
 
-  study_mats_known$beta <- as.numeric(study_mats_known$pooled_delta_psi)
+  if ('pulled_delta_psi' %in% colnames(study_mats_known)){  # if old processed data with typo in pooled
+    study_mats_known$beta <- as.numeric(study_mats_known$pulled_delta_psi)
+  } else {  # if the column name is corrected
+    study_mats_known$beta <- as.numeric(study_mats_known$pooled_delta_psi)
+  }
+
 
   # calculate minimum_count
   study_mats_known$min_count <- unlist(lapply(study_mats_known$count_values,
@@ -209,7 +214,7 @@ import_SPARKS_MATS_for_analysis <- function(input_sparks,
   # filter by minimum count
   study_mats_temp <- subset(study_mats_known,
                             avg_count >= count_threshold &
-                              min_count >= count_threshold) %>% arrange(-beta)
+                              min_count >= min_threshold) %>% arrange(-beta)
 
   return(study_mats_temp)
 }

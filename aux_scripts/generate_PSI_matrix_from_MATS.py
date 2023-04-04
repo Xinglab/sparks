@@ -75,7 +75,7 @@ def process_mats(input_file,
     # append to make a dataframe
     clean_mats_df = pd.concat(clean_mats_list, axis=1).transpose()
     clean_mats_df.columns = ['event', 'beta', 'pval', 'fdr', 'avg_count', 'psi_values', 'count_values',
-                             'inc_len', 'skip_len', 'pulled_psi_1', 'pulled_psi_2', 'pulled_delta_psi']
+                             'inc_len', 'skip_len', 'pooled_psi_1', 'pooled_psi_2', 'pooled_delta_psi']
     # save the output file
     output_file = "%s/%s.%s.MATS_df.txt" % (output_dir, study, event_type)
     clean_mats_df.to_csv(output_file, sep='\t', index=False)

@@ -82,9 +82,9 @@ convert_MATS_format <- function(input_mats){
                                     'count_values',
                                     'inc_len',
                                     'skip_len',
-                                    'pulled_psi_1',
-                                    'pulled_psi_2',
-                                    'pulled_delta_psi',
+                                    'pooled_psi_1',
+                                    'pooled_psi_2',
+                                    'pooled_delta_psi',
                                     'min_count')
 
     return(clean_mats_entry)
