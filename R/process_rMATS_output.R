@@ -5,7 +5,7 @@
 #'
 #' @return converted MATS
 #' @export
-convert_MATS_format <- function(input_mats){
+convert_MATS_format <- function(input_mats, spl_type = "SE"){
   new_mats <- do.call(rbind, apply(input_mats, 1, function(event_entry){
     # combine event ID
     event_id <- paste(c(trimws(event_entry[2:11]), spl_type), collapse = ":")
@@ -133,3 +133,34 @@ import_raw_rMATS_output <- function(input_dir, spl_type = "SE"){
   return(sorted_mats)
 }
 
+import_raw_rMATS_output_indiv <- function(input_mats_file,
+                                          input_event_file_all,
+                                          input_event_file_novel_jxn,
+                                          input_event_file_novel_ss,
+                                          spl_type = "SE"){
+
+  # read in the mats
+  input_mats <- data.table::fread(input_mats_file)
+
+  # read in fromGTF files to determine known JC files
+  input_event_all <- data.table::fread(input_event_file_all)$ID
+  input_event_novel_jxn <- data.table::fread(input_event_file_novel_jxn)$ID
+  input_event_novel_ss <- data.table::fread(input_event_file_novel_ss)$ID
+
+  # remove all IDs found on novel jxn or novel ss from all events
+  known_ids <- input_event_all[!(input_event_all %in% union(input_event_novel_jxn,
+                                                            input_event_novel_ss))]
+
+  # filter mats by ID
+  filtered_mats <- input_mats[input_mats$ID %in% known_ids, ]
+
+  # convert the format to SPARKS-usable one
+  new_mats <- convert_MATS_format(filtered_mats, spl_type)
+
+  # sort and filter
+  min_filtered_mats <- subset(new_mats, min_count >= 20)
+
+  sorted_mats <- min_filtered_mats %>% arrange(-beta)
+
+  return(sorted_mats)
+}

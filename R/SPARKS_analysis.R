@@ -11,7 +11,7 @@
 #'
 #' @param sparks_result SPARKS analysis dataframe
 #' @param sig_test_method p.adjust method - "BH" for FDR, "bonferroni" (default) for FWER
-#' @param same_sign_ES_threshold Set any signatures with abs score below this when sign from pos and neg signature sets are the same
+# #' @param same_sign_ES_threshold Set any signatures with abs score below this when sign from pos and neg signature sets are the same
 #'
 #' @return SPARKS analysis dataframe with padj added
 #' @export
@@ -20,10 +20,14 @@ calculate_SPARKS_padj <- function(sparks_result, sig_test_method = "bonferroni",
   sparks_result$padj <- p.adjust(sparks_result$gsea_combined_pval,
                                  method = sig_test_method)
 
-  # flatten if the sign is the same but the score is below the threhsold
-  sparks_result[(sign(sparks_result$gsea_pos_score) == sign(sparks_result$gsea_neg_score)) &
-                  (sparks_result$gsea_score_abs < same_sign_ES_threshold), ]$padj <- 1
+  # flatten if the sign is the same but the score is below the threshold
+  # - replacement needs at least one contradicting entry, otherwise it throws error
+  # - So, we check before we do this
+  if (sum(sign(sparks_result$gsea_pos_score) == sign(sparks_result$gsea_neg_score)) > 0){
+    sparks_result[(sign(sparks_result$gsea_pos_score) == sign(sparks_result$gsea_neg_score)) &
+                    (sparks_result$gsea_score_abs < same_sign_ES_threshold), ]$padj <- 1
 
+  }
   return(sparks_result)
 }
 
@@ -202,6 +206,10 @@ import_SPARKS_MATS_for_analysis <- function(input_sparks,
 
   if ('pulled_delta_psi' %in% colnames(study_mats_known)){  # if old processed data with typo in pooled
     study_mats_known$beta <- as.numeric(study_mats_known$pulled_delta_psi)
+
+    # change the column names form pulled to pooled
+    colnames(study_mats_known) <- gsub("pulled", "pooled", colnames(study_mats_known))
+
   } else {  # if the column name is corrected
     study_mats_known$beta <- as.numeric(study_mats_known$pooled_delta_psi)
   }

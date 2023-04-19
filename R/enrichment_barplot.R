@@ -25,7 +25,7 @@ generate_enrichment_barplot <- function(result_df,
                                         select_gene_marker = F){
   # calculate padj if it isn't there
   if (!("padj" %in% colnames(result_df))){
-    # print("padj missing, calculating again")
+    print("padj missing, calculating again")
     result_df <- calculate_SPARKS_padj(result_df)
   }
 
